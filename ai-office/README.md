@@ -17,7 +17,7 @@ python3 -m http.server 8000   # → http://localhost:8000/ai-office/
 2. 아래 입력창에서 **🎯 업무 지시** 또는 **🎓 가르치기(피드백)** 를 선택하고 전달.
    - 가르친 내용은 그 직원의 **기억·교훈**에 저장되고, 이후 모든 업무에 자동 반영됩니다.
 3. 직원이 실제로 일하게 하는 두 가지 모드:
-   - **API 모드**: 오른쪽 위 `⚙ API 키` 에 Anthropic API 키 입력 → 이 화면에서 바로 Claude가 답합니다.
+   - **API 모드**: 오른쪽 위 `⚙ API 키` 에 **Anthropic 키(`sk-ant-…`) 또는 Google Gemini 키(`AIza…`)** 입력 — 키 앞자리로 자동 판별해서 Claude 또는 Gemini가 이 화면에서 바로 답합니다.
    - **Claude Code 모드**: 업무 카드의 `프롬프트 복사` → 볼트 루트에서 Claude Code에 붙여넣기 → `.claude/agents/` 의 해당 직원 에이전트가 위키를 읽고 쓰며 진짜 업무를 수행합니다.
 
 ## 데이터

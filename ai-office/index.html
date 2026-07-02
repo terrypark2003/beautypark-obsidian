@@ -267,7 +267,8 @@ const STAFF = [
 ];
 
 const VAULT_HINT = '옵시디언 볼트(beautypark-obsidian) 루트에서 Claude Code를 열고 아래를 붙여넣으세요';
-const MODEL = 'claude-sonnet-5';
+const MODELS = { anthropic: 'claude-sonnet-5', gemini: 'gemini-2.5-flash' };
+function providerOf(key){ return key.startsWith('AIza') ? 'gemini' : 'anthropic'; }
 
 /* ───────────────────────── state ───────────────────────── */
 const store = {
@@ -408,11 +409,29 @@ function buildPrompt(s, text){
   return `${s.name}(${s.id}) 서브에이전트로 다음 업무를 처리해줘. 시작 전에 CLAUDE.md와 담당 MOC를 꼭 읽어.\n\n업무 지시:\n${text}${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
 }
 
-async function callClaude(s, text){
+async function callLLM(s, text){
   const key = localStorage.getItem('bp.apikey');
   if (!key) return null;
   const mem = store.load(s.id, 'memory').map(m => `- ${m.text}`).join('\n');
   const sys = `너는 뷰티파크(피부·미용 병의원)의 AI 직원 '${s.name}'이다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: 의료광고법 준수(효과 보장·과장·치료경험담·비교비방 금지), 출처 없는 의학 주장 금지, 개인정보 익명화. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
+
+  if (providerOf(key) === 'gemini'){
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: sys }] },
+        contents: [{ role: 'user', parts: [{ text }] }],
+        generationConfig: { maxOutputTokens: 2000 },
+      }),
+    });
+    if (!res.ok) throw new Error('Gemini API 오류 ' + res.status);
+    const data = await res.json();
+    const out = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n').trim();
+    if (!out) throw new Error('Gemini 응답이 비어 있습니다 (안전 필터 또는 토큰 한도)');
+    return out;
+  }
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -421,9 +440,9 @@ async function callClaude(s, text){
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify({ model: MODEL, max_tokens: 2000, system: sys, messages: [{role:'user', content: text}] }),
+    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 2000, system: sys, messages: [{role:'user', content: text}] }),
   });
-  if (!res.ok) throw new Error('API 오류 ' + res.status);
+  if (!res.ok) throw new Error('Claude API 오류 ' + res.status);
   const data = await res.json();
   return data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
 }
@@ -460,9 +479,9 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
   const started = Date.now();
   let result;
   try{
-    result = await callClaude(s, text);
+    result = await callLLM(s, text);
     if (result === null){
-      result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
+      result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic(sk-ant-…) 또는 Google Gemini(AIza…) API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
       await new Promise(r => setTimeout(r, 4000 + Math.random()*3000));
     }
   }catch(e){
@@ -481,11 +500,16 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
 
 function setKey(){
   const cur = localStorage.getItem('bp.apikey') || '';
-  const k = prompt('Anthropic API 키 (sk-ant-…)\n비우고 확인하면 시뮬레이션 모드로 전환됩니다.\n⚠️ 키는 이 브라우저의 localStorage에만 저장됩니다.', cur);
+  const k = prompt('API 키 — Anthropic(sk-ant-…) 또는 Google Gemini(AIza…)\n앞자리로 자동 판별합니다. 비우고 확인하면 시뮬레이션 모드로 전환됩니다.\n⚠️ 키는 이 브라우저의 localStorage에만 저장됩니다.', cur);
   if (k === null) return;
-  if (k.trim()) localStorage.setItem('bp.apikey', k.trim());
-  else localStorage.removeItem('bp.apikey');
-  alert(k.trim() ? '저장되었습니다. 이제 직원이 실제로 답합니다.' : '시뮬레이션 모드입니다.');
+  if (k.trim()){
+    localStorage.setItem('bp.apikey', k.trim());
+    const p = providerOf(k.trim());
+    alert(`저장되었습니다. ${p === 'gemini' ? 'Google Gemini(' + MODELS.gemini + ')' : 'Claude(' + MODELS.anthropic + ')'} 로 직원이 실제로 답합니다.`);
+  } else {
+    localStorage.removeItem('bp.apikey');
+    alert('시뮬레이션 모드입니다.');
+  }
 }
 </script>
 </body>
