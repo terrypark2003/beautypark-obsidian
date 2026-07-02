@@ -24,9 +24,11 @@ python3 -m http.server 8000   # → http://localhost:8000/ai-office/
 
 같은 코드가 접속 도메인으로 브랜드를 자동 전환합니다:
 
-- `beautypark-obsidian.vercel.app` → **뷰티파크 AI 사무실**
-- `sloboda-obsidian.vercel.app` → **슬로보다 AI 사무실**
+- `beautypark-obsidian.vercel.app` → **뷰티파크 AI 사무실** (피부·미용 병의원 — 의료광고법 기준)
+- `sloboda-obsidian.vercel.app` → **슬로보다 AI 사무실** (slobodacosmetics.com 화장품 이커머스 — 화장품법 표시·광고 기준)
 - 로컬 테스트: `index.html?brand=sloboda`
+
+슬로보다 모드에서는 직원도 업종에 맞게 바뀝니다: 상담실장 → **CS실장**(구매 전환·리뷰·반품), 의학팩트체커 → **성분팩트체커**(화장품법 검수), 메디컬 랩 → **성분 랩**, 마케팅PD는 퍼포먼스 광고·자사몰 SEO·네이버 쇼핑 담당 등.
 
 헤더의 `⇄` 버튼으로 두 사무실을 오갈 수 있습니다. 직원의 업무 이력·기억은 도메인별 localStorage라 자동으로 분리됩니다.
 
