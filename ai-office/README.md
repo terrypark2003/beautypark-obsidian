@@ -17,8 +17,20 @@ python3 -m http.server 8000   # → http://localhost:8000/ai-office/
 2. 아래 입력창에서 **🎯 업무 지시** 또는 **🎓 가르치기(피드백)** 를 선택하고 전달.
    - 가르친 내용은 그 직원의 **기억·교훈**에 저장되고, 이후 모든 업무에 자동 반영됩니다.
 3. 직원이 실제로 일하게 하는 두 가지 모드:
-   - **API 모드**: 오른쪽 위 `⚙ API 키` 에 **Anthropic 키(`sk-ant-…`) 또는 Google Gemini 키(`AIza…`)** 입력 — 키 앞자리로 자동 판별해서 Claude 또는 Gemini가 이 화면에서 바로 답합니다.
+   - **API 모드**: 오른쪽 위 `⚙ API 키` 에 **Anthropic 키 또는 Google Gemini 키** 입력 — `sk-ant-…` 로 시작하면 Claude, 그 외 전부(`AIza…`, `AQ.…` 등)는 Gemini로 자동 판별합니다. 연결된 모델은 헤더 배지와 업무 카드 메타 정보에 표시됩니다.
    - **Claude Code 모드**: 업무 카드의 `프롬프트 복사` → 볼트 루트에서 Claude Code에 붙여넣기 → `.claude/agents/` 의 해당 직원 에이전트가 위키를 읽고 쓰며 진짜 업무를 수행합니다.
+
+## 멀티 브랜드 (뷰티파크 ⇄ 슬로보다)
+
+같은 코드가 접속 도메인으로 브랜드를 자동 전환합니다:
+
+- `beautypark-obsidian.vercel.app` → **뷰티파크 AI 사무실**
+- `sloboda-obsidian.vercel.app` → **슬로보다 AI 사무실**
+- 로컬 테스트: `index.html?brand=sloboda`
+
+헤더의 `⇄` 버튼으로 두 사무실을 오갈 수 있습니다. 직원의 업무 이력·기억은 도메인별 localStorage라 자동으로 분리됩니다.
+
+두 번째 주소를 만드는 법: Vercel에서 **같은 저장소를 한 번 더 import** 하고 프로젝트 이름을 `sloboda-obsidian` 으로 지정하면 끝.
 
 ## 데이터
 

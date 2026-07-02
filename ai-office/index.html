@@ -99,10 +99,11 @@
 <body>
 
 <header>
-  <h1>뷰티파크 AI 사무실</h1>
-  <span class="sub">옵시디언 세컨브레인 · Claude</span>
+  <h1 id="brandTitle">뷰티파크 AI 사무실</h1>
+  <span class="sub" id="brandSub">옵시디언 세컨브레인 · Claude</span>
   <span class="spacer"></span>
-  <button class="gear" onclick="setKey()">⚙ API 키</button>
+  <a class="gear" id="switchLink" style="text-decoration:none">⇄</a>
+  <button class="gear" id="keyBtn" onclick="setKey()">⚙ API 키</button>
   <span class="status-badge">영업 중</span>
 </header>
 
@@ -268,7 +269,27 @@ const STAFF = [
 
 const VAULT_HINT = '옵시디언 볼트(beautypark-obsidian) 루트에서 Claude Code를 열고 아래를 붙여넣으세요';
 const MODELS = { anthropic: 'claude-sonnet-5', gemini: 'gemini-2.5-flash' };
-function providerOf(key){ return key.startsWith('AIza') ? 'gemini' : 'anthropic'; }
+/* Anthropic 키는 항상 sk-ant- 로 시작. 그 외(AIza…, AQ.… 등)는 전부 Gemini로 처리 */
+function providerOf(key){ return key.startsWith('sk-ant-') ? 'anthropic' : 'gemini'; }
+function modelLabel(provider){ return provider === 'gemini' ? `Gemini(${MODELS.gemini})` : `Claude(${MODELS.anthropic})`; }
+
+/* ── 브랜드: 접속 도메인(또는 ?brand=)으로 자동 전환 ── */
+const BRANDS = {
+  beautypark: { key:'beautypark', name:'뷰티파크', url:'https://beautypark-obsidian.vercel.app' },
+  sloboda:    { key:'sloboda',    name:'슬로보다', url:'https://sloboda-obsidian.vercel.app' },
+};
+const _qpBrand = new URLSearchParams(location.search).get('brand');
+const BRAND = BRANDS[_qpBrand] || (location.hostname.startsWith('sloboda') ? BRANDS.sloboda : BRANDS.beautypark);
+const OTHER = BRAND.key === 'sloboda' ? BRANDS.beautypark : BRANDS.sloboda;
+document.title = `${BRAND.name} AI 사무실`;
+document.getElementById('brandTitle').textContent = `${BRAND.name} AI 사무실`;
+const _sw = document.getElementById('switchLink');
+_sw.textContent = `⇄ ${OTHER.name} 사무실`;
+_sw.href = OTHER.url;
+function updateKeyBadge(){
+  const key = localStorage.getItem('bp.apikey');
+  document.getElementById('keyBtn').textContent = key ? `⚙ ${modelLabel(providerOf(key))} 연결됨` : '⚙ API 키';
+}
 
 /* ───────────────────────── state ───────────────────────── */
 const store = {
@@ -387,7 +408,7 @@ function renderWork(){
     const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">📋 Claude Code용 프롬프트 복사</button>` : '';
     const label = t.mode === 'teach' ? '🎓 가르치기' : '🎯 업무 지시';
     return `<div class="task">
-      <div class="meta"><span class="${dotCls}"></span> ${label} · ${fmt(t.ts)}${t.dur ? ` · 소요 ${t.dur}초` : ''}</div>
+      <div class="meta"><span class="${dotCls}"></span> ${label} · ${fmt(t.ts)}${t.dur ? ` · 소요 ${t.dur}초` : ''}${t.model ? ` · ${esc(t.model)}` : ''}</div>
       <div class="instruction ${t.mode === 'teach' ? 'teach' : ''}">${esc(t.text)}</div>
       ${statusLine}${copy}
     </div>`;
@@ -412,10 +433,11 @@ function buildPrompt(s, text){
 async function callLLM(s, text){
   const key = localStorage.getItem('bp.apikey');
   if (!key) return null;
+  const provider = providerOf(key);
   const mem = store.load(s.id, 'memory').map(m => `- ${m.text}`).join('\n');
-  const sys = `너는 뷰티파크(피부·미용 병의원)의 AI 직원 '${s.name}'이다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: 의료광고법 준수(효과 보장·과장·치료경험담·비교비방 금지), 출처 없는 의학 주장 금지, 개인정보 익명화. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
+  const sys = `너는 ${BRAND.name}(피부·미용 병의원)의 AI 직원 '${s.name}'이다. 현재 ${modelLabel(provider)} 모델로 구동되고 있다 — 어떤 모델이냐고 물으면 이 사실대로 답한다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: 의료광고법 준수(효과 보장·과장·치료경험담·비교비방 금지), 출처 없는 의학 주장 금지, 개인정보 익명화. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
 
-  if (providerOf(key) === 'gemini'){
+  if (provider === 'gemini'){
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
@@ -429,7 +451,7 @@ async function callLLM(s, text){
     const data = await res.json();
     const out = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n').trim();
     if (!out) throw new Error('Gemini 응답이 비어 있습니다 (안전 필터 또는 토큰 한도)');
-    return out;
+    return { text: out, model: modelLabel('gemini') };
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -444,7 +466,7 @@ async function callLLM(s, text){
   });
   if (!res.ok) throw new Error('Claude API 오류 ' + res.status);
   const data = await res.json();
-  return data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+  return { text: data.content.filter(b => b.type === 'text').map(b => b.text).join('\n'), model: modelLabel('anthropic') };
 }
 
 document.getElementById('sendBtn').addEventListener('click', async () => {
@@ -477,19 +499,21 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
   renderTab();
 
   const started = Date.now();
-  let result;
+  let result, usedModel = null;
   try{
-    result = await callLLM(s, text);
-    if (result === null){
-      result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic(sk-ant-…) 또는 Google Gemini(AIza…) API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
-      await new Promise(r => setTimeout(r, 4000 + Math.random()*3000));
+    const r = await callLLM(s, text);
+    if (r === null){
+      result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic(sk-ant-…) 또는 Google Gemini API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
+      await new Promise(r2 => setTimeout(r2, 4000 + Math.random()*3000));
+    } else {
+      result = r.text; usedModel = r.model;
     }
   }catch(e){
     result = '⚠️ ' + e.message + ' — API 키를 확인하세요.';
   }
   const all = store.load(s.id, 'tasks');
   const mine = all.find(x => x.ts === t.ts);
-  if (mine){ mine.status = 'done'; mine.result = result; mine.dur = Math.round((Date.now() - started)/1000); }
+  if (mine){ mine.status = 'done'; mine.result = result; mine.dur = Math.round((Date.now() - started)/1000); mine.model = usedModel; }
   store.save(s.id, 'tasks', all);
   diary(s.id, `업무 완료 (${Math.round((Date.now() - started)/1000)}초)`);
   s.state = 'idle';
@@ -500,17 +524,18 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
 
 function setKey(){
   const cur = localStorage.getItem('bp.apikey') || '';
-  const k = prompt('API 키 — Anthropic(sk-ant-…) 또는 Google Gemini(AIza…)\n앞자리로 자동 판별합니다. 비우고 확인하면 시뮬레이션 모드로 전환됩니다.\n⚠️ 키는 이 브라우저의 localStorage에만 저장됩니다.', cur);
+  const k = prompt('API 키 입력\n· sk-ant-… → Claude\n· 그 외 전부(AIza…, AQ.… 등) → Google Gemini\n비우고 확인하면 시뮬레이션 모드로 전환됩니다.\n⚠️ 키는 이 브라우저의 localStorage에만 저장됩니다.', cur);
   if (k === null) return;
   if (k.trim()){
     localStorage.setItem('bp.apikey', k.trim());
-    const p = providerOf(k.trim());
-    alert(`저장되었습니다. ${p === 'gemini' ? 'Google Gemini(' + MODELS.gemini + ')' : 'Claude(' + MODELS.anthropic + ')'} 로 직원이 실제로 답합니다.`);
+    alert(`저장되었습니다. ${modelLabel(providerOf(k.trim()))} 로 직원이 실제로 답합니다.`);
   } else {
     localStorage.removeItem('bp.apikey');
     alert('시뮬레이션 모드입니다.');
   }
+  updateKeyBadge();
 }
+updateKeyBadge();
 </script>
 </body>
 </html>
