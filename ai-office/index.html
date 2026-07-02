@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>뷰티파크 AI 사무실</title>
+<style>
+  :root{
+    --bg:#f0ecdd; --panel:#ffffff; --ink:#3b3630; --sub:#8a8378;
+    --office:#2b2521; --room:#38312a; --floor:#453d34; --chip:#1f1b17;
+    --accent:#e0674f; --accent-soft:#fbe7e2; --line:#e5dfd2; --green:#4c9a63;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--ink); font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden;}
+
+  /* ── header ── */
+  header{display:flex; align-items:baseline; gap:12px; padding:14px 22px;}
+  header h1{font-size:22px; letter-spacing:-.5px;}
+  header .sub{font-size:13px; color:var(--sub);}
+  header .spacer{flex:1;}
+  .status-badge{font-size:12px; color:#3c7a4f; background:#fff; border:1px solid var(--line); border-radius:999px; padding:5px 14px;}
+  .status-badge::before{content:"●"; color:var(--green); margin-right:6px; font-size:9px;}
+  .gear{cursor:pointer; border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 12px; font-size:12px; color:var(--sub);}
+
+  main{flex:1; display:flex; gap:16px; padding:0 16px 16px; min-height:0;}
+
+  /* ── office (left) ── */
+  #office{flex:1.1; background:var(--office); border-radius:14px; padding:14px; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:12px; position:relative; min-width:0;}
+  .room{background:var(--room); border:2px solid transparent; border-radius:8px; position:relative; overflow:visible; cursor:default;}
+  .room.highlight{border-color:#e59b83;}
+  .room .label{position:absolute; top:-9px; left:10px; background:var(--chip); color:#f0ecdd; font-size:11px; padding:3px 9px; border-radius:4px; z-index:5;}
+  .room .plant{position:absolute; top:6px; right:8px; font-size:12px; opacity:.85;}
+  .room .floor{position:absolute; inset:22px 12px 10px; background:var(--floor); border-radius:4px;}
+  .hint{position:absolute; bottom:8px; left:12px; font-size:11px; color:#8a8378; background:rgba(0,0,0,.25); padding:3px 8px; border-radius:4px;}
+
+  .desk{position:absolute; width:78px; height:22px; background:#7d5f42; border-radius:2px; box-shadow:0 4px 0 #5e4730;}
+  .desk::after{content:""; position:absolute; right:8px; top:-2px; width:10px; height:6px; background:#efe9dc; border:2px solid #23201c; border-bottom-width:1px;}
+  .coffee{position:absolute; width:22px; height:30px; background:#23201c; border-radius:2px;}
+  .coffee::after{content:"☕"; position:absolute; font-size:10px; left:5px; top:9px;}
+  .coffee-label{position:absolute; font-size:10px; color:#9b937f;}
+
+  /* pixel character */
+  .char{position:absolute; width:30px; cursor:pointer; transition:left 1.6s linear, top 1.6s linear; z-index:4; image-rendering:pixelated;}
+  .char .nametag{position:absolute; bottom:100%; left:50%; transform:translateX(-50%); margin-bottom:3px; background:#f5f1e6; color:#2b2521; font-size:10px; white-space:nowrap; padding:2px 7px; border-radius:3px; box-shadow:0 1px 0 rgba(0,0,0,.4);}
+  .char .bubble{position:absolute; bottom:100%; left:50%; transform:translateX(-50%); margin-bottom:24px; background:#efe6df; color:#4a423a; font-size:10px; white-space:nowrap; max-width:190px; overflow:hidden; text-overflow:ellipsis; padding:3px 9px; border-radius:8px; display:none; z-index:6;}
+  .char.talking .bubble{display:block;}
+  .char .px{margin:0 auto;}
+  .char .hair{width:18px; height:7px; background:#2a211a; border-radius:2px 2px 0 0;}
+  .char .face{width:18px; height:8px; background:#f2c9a0; position:relative;}
+  .char .face::before,.char .face::after{content:""; position:absolute; top:2px; width:2px; height:3px; background:#2a211a;}
+  .char .face::before{left:3px;} .char .face::after{right:3px;}
+  .char .torso{width:22px; height:11px; background:var(--shirt,#888);}
+  .char .legs{width:12px; height:5px; background:#2a2622;}
+  .char .shadow{width:22px; height:4px; background:rgba(0,0,0,.35); border-radius:50%; margin-top:1px;}
+  .char.working .torso{animation:bob 1.1s infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
+  .char .dot{position:absolute; top:-4px; right:-1px; width:7px; height:7px; border-radius:50%; background:#e6b23c; display:none;}
+  .char.working .dot{display:block;}
+
+  /* ── panel (right) ── */
+  #panel{flex:1; background:var(--panel); border-radius:14px; display:flex; flex-direction:column; min-width:0; border:1px solid var(--line);}
+  .p-head{display:flex; gap:14px; align-items:center; padding:18px 20px 12px;}
+  .p-avatar{width:46px; height:46px; border-radius:50%; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;}
+  .p-head h2{font-size:17px;}
+  .p-head p{font-size:12px; color:var(--sub); margin-top:3px; line-height:1.5;}
+  .tabs{display:flex; gap:8px; padding:6px 20px 14px; border-bottom:1px solid var(--line);}
+  .tab{font-size:12px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer;}
+  .tab.active{background:var(--chip); color:#fff; border-color:var(--chip);}
+  #tabBody{flex:1; overflow-y:auto; padding:18px 20px;}
+  .empty{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--sub); font-size:13px; gap:10px; text-align:center; line-height:1.7;}
+  .empty .ico{font-size:22px;}
+
+  .task{border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px;}
+  .task .meta{font-size:11px; color:var(--sub); margin-bottom:8px; display:flex; align-items:center; gap:6px;}
+  .task .meta .m-dot{width:7px;height:7px;border-radius:50%;background:#e6b23c;}
+  .task .meta .m-dot.done{background:var(--green);}
+  .task .instruction{background:var(--accent-soft); color:#b4432e; font-size:13px; line-height:1.6; padding:10px 14px; border-radius:8px; margin-bottom:10px; white-space:pre-wrap;}
+  .task .instruction.teach{background:#e9f0e6; color:#3c6e4c;}
+  .task .result{font-size:13px; line-height:1.75; white-space:pre-wrap; color:var(--ink); border-top:1px dashed var(--line); padding-top:10px;}
+  .task .working-note{font-size:12px; color:var(--sub);}
+  .task .copybtn{margin-top:8px; font-size:11px; border:1px solid var(--line); background:#faf8f2; border-radius:6px; padding:4px 10px; cursor:pointer; color:var(--sub);}
+  .jobdesc{font-size:13px; line-height:1.85; white-space:pre-wrap;}
+  .jobdesc h3{font-size:13px; margin:14px 0 4px;}
+  .memory-item, .diary-item{border-bottom:1px solid var(--line); padding:10px 2px; font-size:13px; line-height:1.6;}
+  .memory-item .when, .diary-item .when{font-size:11px; color:var(--sub); margin-bottom:3px;}
+
+  /* composer */
+  .composer{border-top:1px solid var(--line); padding:12px 16px 16px;}
+  .modes{display:flex; gap:16px; font-size:13px; margin-bottom:8px;}
+  .modes label{display:flex; align-items:center; gap:6px; cursor:pointer;}
+  .modes input{accent-color:var(--accent);}
+  .c-row{display:flex; gap:10px;}
+  textarea{flex:1; resize:none; height:64px; border:1px solid var(--line); border-radius:10px; padding:10px 14px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);}
+  textarea:focus{outline:none; border-color:#d8b8a8;}
+  #sendBtn{width:84px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; cursor:pointer; font-family:inherit;}
+  #sendBtn:disabled{background:#dcd4c6; cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>뷰티파크 AI 사무실</h1>
+  <span class="sub">옵시디언 세컨브레인 · Claude</span>
+  <span class="spacer"></span>
+  <button class="gear" onclick="setKey()">⚙ API 키</button>
+  <span class="status-badge">영업 중</span>
+</header>
+
+<main>
+  <div id="office"><div class="hint">직원을 클릭해 업무를 지시하세요</div></div>
+
+  <div id="panel">
+    <div class="p-head">
+      <div class="p-avatar" id="pAvatar">🏢</div>
+      <div>
+        <h2 id="pName">직원을 선택하세요</h2>
+        <p id="pDesc">왼쪽 사무실에서 직원을 클릭하면 업무를 지시할 수 있습니다</p>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="work">업무</button>
+      <button class="tab" data-tab="job">직무기술서</button>
+      <button class="tab" data-tab="memory">기억 · 교훈</button>
+      <button class="tab" data-tab="diary">업무 일지</button>
+    </div>
+    <div id="tabBody">
+      <div class="empty"><span class="ico">🪑</span>아직 선택된 직원이 없습니다</div>
+    </div>
+    <div class="composer">
+      <div class="modes">
+        <label><input type="radio" name="mode" value="task" checked> 🎯 업무 지시</label>
+        <label><input type="radio" name="mode" value="teach"> 🎓 가르치기 (피드백)</label>
+      </div>
+      <div class="c-row">
+        <textarea id="input" placeholder="지시 내용을 입력하세요…  예) 네이버 AI탭 노출 전략 정리해줘"></textarea>
+        <button id="sendBtn" disabled>전달</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ───────────────────────── data ───────────────────────── */
+const ROOMS = [
+  {id:'marketing', name:'마케팅룸'},
+  {id:'consult',   name:'상담실'},
+  {id:'ops',       name:'운영실'},
+  {id:'studio',    name:'콘텐츠 스튜디오'},
+  {id:'medical',   name:'메디컬 랩'},
+  {id:'strategy',  name:'경영전략실'},
+  {id:'secretary', name:'비서실'},
+  {id:'lounge',    name:'휴게실'},
+];
+
+const STAFF = [
+  {id:'marketing-pd', name:'마케팅PD', emoji:'🎯', room:'marketing', shirt:'#e07a5f',
+   desc:'마케팅룸 · 병원의 신환 유입을 책임지는 마케팅 총괄. AI검색(GEO)·네이버 생태계·광고 성과가 주 전장.',
+   job:`## 담당 업무
+- GEO(AI검색) 최적화: 네이버 AI탭·ChatGPT 등에 병원이 인용되도록 콘텐츠 구조화
+- 네이버 생태계: 플레이스 최적화, 블로그 SEO
+- 유료 광고 성과 분석 (파워링크·메타·구글)
+
+## 이런 걸 시키세요
+"네이버 AI탭에 우리 병원 노출 전략 짜줘" · "이번 달 채널별 성과 분석해줘"
+
+## 업무 원칙
+- 성과 분석은 위키의 [[채널별_성과]] 데이터에만 근거
+- 외부용 문구는 [[의료광고법_가이드]] 1차 자체 검수
+
+## 에이전트 파일
+.claude/agents/marketing-pd.md`},
+  {id:'consult-lead', name:'상담실장', emoji:'💬', room:'consult', shirt:'#6d94b8',
+   desc:'상담실 · 문의를 내원으로 바꾸는 상담 총괄. 스크립트·이의제기 대응·전환율 개선.',
+   job:`## 담당 업무
+- 상담 스크립트 작성·개선 (전화·카톡·대면)
+- 이의제기(가격·비교·망설임) 대응 설계
+- 상담 녹취 분석으로 이탈 원인 발굴
+
+## 이런 걸 시키세요
+"가격 문의 응대 스크립트 다듬어줘" · "이 상담 녹취에서 이탈 원인 찾아줘"
+
+## 업무 원칙
+- 의학적 답변은 [[시술_핵심지식]] verified 내용에만 근거
+- 녹취 인용 시 개인정보 익명화 필수
+
+## 에이전트 파일
+.claude/agents/consult-lead.md`},
+  {id:'ops-manager', name:'운영매니저', emoji:'📋', room:'ops', shirt:'#a58cc7',
+   desc:'운영실 · 병원이 매일 매끄럽게 돌아가게 하는 운영 총괄. 직원 교육·CS 프로세스·내부 매뉴얼.',
+   job:`## 담당 업무
+- 직원 교육자료·온보딩 커리큘럼
+- CS 대응 프로세스 · 에스컬레이션 기준
+- 데스크·시술실 일일 운영 루틴(SOP)
+
+## 이런 걸 시키세요
+"신입 데스크 교육 체크리스트 만들어줘"
+
+## 업무 원칙
+- 산출물은 바로 인쇄해 쓸 수 있는 체크리스트 형태로
+- 시술 지식 인용은 [[시술_핵심지식]]에서만
+
+## 에이전트 파일
+.claude/agents/ops-manager.md`},
+  {id:'content-writer', name:'콘텐츠작가', emoji:'✍️', room:'studio', shirt:'#dcb54a',
+   desc:'콘텐츠 스튜디오 · 유튜브 대본·블로그·카드뉴스를 만드는 콘텐츠 총괄. 하나의 원본에서 여러 채널 콘텐츠를 뽑아내는 워터폴이 특기.',
+   job:`## 담당 업무
+- 유튜브 대본 (VSL 공식: 후킹→문제→원리→해결→CTA)
+- 블로그·카드뉴스 원고
+- 워터폴: 롱폼 1개 → 숏폼 3개 + 블로그 + 카드뉴스
+
+## 이런 걸 시키세요
+"리프팅 주제로 유튜브 대본 써줘" (→ 팩트체커 자동 연계)
+
+## 업무 원칙 (철칙)
+- 의학적 내용은 [[시술_핵심지식]]에 있는 것만 사용
+- 모든 원고는 발행 전 의학팩트체커 검수 필수
+
+## 에이전트 파일
+.claude/agents/content-writer.md`},
+  {id:'medical-factchecker', name:'의학팩트체커', emoji:'🔬', room:'medical', shirt:'#7fb3d5',
+   desc:'메디컬 랩 · 병원에서 나가는 모든 의학적 주장의 최종 관문. 출처 없는 주장은 통과시키지 않음. 단독 호출 가능.',
+   job:`## 담당 업무
+- 의학 주장 검증 (사실성 + 출처 병기)
+- 의료광고법 검수 (효과 보장·과장·치료경험담·비교비방 차단)
+- 검수 결과를 [[팩트체크_로그]]에 기록
+
+## 이런 걸 시키세요
+"이 문장 의료광고법 걸리나 봐줘"
+
+## 판정
+✅ 통과 / ⚠️ 조건부(수정 요구) / ❌ 반려 — 반려 시 안전한 대체 표현 제안
+
+## 에이전트 파일
+.claude/agents/medical-factchecker.md`},
+  {id:'exec-assistant', name:'경영비서', emoji:'📊', room:'strategy', shirt:'#81b29a',
+   desc:'경영전략실 · 대표의 의사결정을 돕는 경영 참모. 전 팀의 데이터를 가로로 읽고 숫자로 브리핑.',
+   job:`## 담당 업무
+- 매출/KPI 리포트 · 월간 경영 브리핑
+- 퍼널 분석 (유입→문의→내원→시술→재방문)
+- 의사결정 필요 항목을 선택지로 정리
+
+## 이런 걸 시키세요
+"이번 달 채널별 성과 분석해줘"
+
+## 업무 원칙
+- 결론 먼저, 근거는 뒤에
+- 데이터 없으면 추측 대신 "확인 필요한 숫자" 목록 제시
+
+## 에이전트 파일
+.claude/agents/exec-assistant.md`},
+  {id:'chief-librarian', name:'비서실장', emoji:'📚', room:'secretary', shirt:'#5f7a61',
+   desc:'비서실 · 세컨브레인 자체를 관리하는 직원. 넣기·점검 루프 실행, 직원 기억 관리, 주간 감사 보고.',
+   job:`## 담당 업무
+- ① 넣기 루프: _INBOX 자료 → 위키 반영 → 원본 정리
+- ② 점검 루프: 모순·깨진 링크·오래된 문서 감사
+- ③ 증류 루프: 반복 패턴 → 99_Insights 인사이트화
+
+## 이런 걸 시키세요
+"INBOX 새 자료 넣기 해줘" · "위키 점검해줘"
+
+## 업무 원칙
+- 1층(01_Raw_Data)은 절대 수정 금지, 이동만 허용
+- 개인정보 익명화 필수
+
+## 에이전트 파일
+.claude/agents/chief-librarian.md`},
+];
+
+const VAULT_HINT = '옵시디언 볼트(beautypark-obsidian) 루트에서 Claude Code를 열고 아래를 붙여넣으세요';
+const MODEL = 'claude-sonnet-5';
+
+/* ───────────────────────── state ───────────────────────── */
+const store = {
+  load(id, key){ try{ return JSON.parse(localStorage.getItem(`bp.${id}.${key}`)) || []; }catch(e){ return []; } },
+  save(id, key, v){ localStorage.setItem(`bp.${id}.${key}`, JSON.stringify(v)); },
+};
+let selected = null;
+let activeTab = 'work';
+
+/* ───────────────────────── office render ───────────────────────── */
+const officeEl = document.getElementById('office');
+ROOMS.forEach(r => {
+  const el = document.createElement('div');
+  el.className = 'room'; el.id = 'room-' + r.id;
+  el.innerHTML = `<span class="label">${r.name}</span><span class="plant">🪴</span><div class="floor"></div>`;
+  officeEl.insertBefore(el, officeEl.querySelector('.hint'));
+});
+const lounge = document.querySelector('#room-lounge .floor');
+lounge.insertAdjacentHTML('beforeend', `<div class="coffee" style="left:18%;top:18%"></div><div class="coffee-label" style="left:8%;top:62%">☕ 커피머신</div>`);
+
+STAFF.forEach(s => {
+  const floor = document.querySelector(`#room-${s.room} .floor`);
+  floor.insertAdjacentHTML('beforeend', `<div class="desk" style="left:30%;top:52%"></div>`);
+  const c = document.createElement('div');
+  c.className = 'char'; c.id = 'char-' + s.id;
+  c.style.setProperty('--shirt', s.shirt);
+  c.style.left = '38%'; c.style.top = '18%';
+  c.innerHTML = `<span class="bubble"></span><span class="nametag">${s.name}</span><span class="dot"></span>
+    <div class="px hair"></div><div class="px face"></div><div class="px torso"></div><div class="px legs"></div><div class="px shadow"></div>`;
+  c.addEventListener('click', () => select(s.id));
+  floor.appendChild(c);
+  s.el = c; s.home = floor; s.state = 'idle';
+});
+
+/* break-time wandering */
+function wander(){
+  const idle = STAFF.filter(s => s.state === 'idle');
+  if (idle.length && Math.random() < .5){
+    const s = idle[Math.floor(Math.random()*idle.length)];
+    s.state = 'break';
+    lounge.appendChild(s.el);
+    s.el.style.left = (30 + Math.random()*40) + '%'; s.el.style.top = (25 + Math.random()*35) + '%';
+    say(s, '☕ 잠깐 휴식...', 14000);
+    setTimeout(() => { if(s.state==='break'){ goHome(s); s.state='idle'; } }, 15000);
+  }
+  setTimeout(wander, 25000 + Math.random()*40000);
+}
+function goHome(s){ s.home.appendChild(s.el); s.el.style.left='38%'; s.el.style.top='18%'; }
+function say(s, text, ms){
+  const b = s.el.querySelector('.bubble');
+  b.textContent = text; s.el.classList.add('talking');
+  clearTimeout(s._sayT);
+  if (ms) s._sayT = setTimeout(() => s.el.classList.remove('talking'), ms);
+}
+setTimeout(wander, 8000);
+
+/* ───────────────────────── panel ───────────────────────── */
+const tabBody = document.getElementById('tabBody');
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); activeTab = t.dataset.tab; renderTab();
+}));
+
+function select(id){
+  selected = STAFF.find(s => s.id === id);
+  document.querySelectorAll('.room').forEach(r => r.classList.remove('highlight'));
+  document.getElementById('room-' + selected.room).classList.add('highlight');
+  document.getElementById('pAvatar').textContent = selected.emoji;
+  document.getElementById('pName').textContent = selected.name;
+  document.getElementById('pDesc').textContent = selected.desc;
+  document.getElementById('sendBtn').disabled = false;
+  renderTab();
+}
+
+function fmt(ts){
+  const d = new Date(ts);
+  const h = d.getHours(); const ap = h < 12 ? '오전' : '오후';
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return `${ap} ${hh}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+function esc(x){ const d = document.createElement('div'); d.textContent = x; return d.innerHTML; }
+
+function renderTab(){
+  if (!selected){ return; }
+  if (activeTab === 'work') return renderWork();
+  if (activeTab === 'job'){
+    tabBody.innerHTML = `<div class="jobdesc">${esc(selected.job).replace(/## (.+)/g,'<h3>$1</h3>')}</div>`;
+    return;
+  }
+  if (activeTab === 'memory'){
+    const items = store.load(selected.id, 'memory');
+    tabBody.innerHTML = items.length
+      ? items.map(m => `<div class="memory-item"><div class="when">🎓 ${fmt(m.ts)}</div>${esc(m.text)}</div>`).join('')
+      : `<div class="empty"><span class="ico">🎓</span>아직 배운 교훈이 없습니다.<br>아래에서 '가르치기'로 피드백을 남기면 기억합니다.</div>`;
+    return;
+  }
+  if (activeTab === 'diary'){
+    const items = store.load(selected.id, 'diary');
+    tabBody.innerHTML = items.length
+      ? items.slice().reverse().map(m => `<div class="diary-item"><div class="when">${fmt(m.ts)}</div>${esc(m.text)}</div>`).join('')
+      : `<div class="empty"><span class="ico">📓</span>아직 업무 일지가 없습니다.</div>`;
+  }
+}
+
+function renderWork(){
+  const tasks = store.load(selected.id, 'tasks');
+  if (!tasks.length){
+    tabBody.innerHTML = `<div class="empty"><span class="ico">💼</span>아직 업무 이력이 없습니다.<br>아래에 첫 지시를 입력해 보세요.</div>`;
+    return;
+  }
+  tabBody.innerHTML = tasks.map(t => {
+    const dotCls = t.status === 'done' ? 'm-dot done' : 'm-dot';
+    const statusLine = t.status === 'working'
+      ? `<div class="working-note">⏳ 작업 중…</div>`
+      : (t.result ? `<div class="result">${esc(t.result)}</div>` : '');
+    const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">📋 Claude Code용 프롬프트 복사</button>` : '';
+    const label = t.mode === 'teach' ? '🎓 가르치기' : '🎯 업무 지시';
+    return `<div class="task">
+      <div class="meta"><span class="${dotCls}"></span> ${label} · ${fmt(t.ts)}${t.dur ? ` · 소요 ${t.dur}초` : ''}</div>
+      <div class="instruction ${t.mode === 'teach' ? 'teach' : ''}">${esc(t.text)}</div>
+      ${statusLine}${copy}
+    </div>`;
+  }).join('');
+  tabBody.querySelectorAll('.copybtn').forEach(b => b.addEventListener('click', () => {
+    navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy));
+    b.textContent = '✅ 복사됨';
+  }));
+  tabBody.scrollTop = tabBody.scrollHeight;
+}
+
+/* ───────────────────────── work engine ───────────────────────── */
+function diary(id, text){
+  const d = store.load(id, 'diary'); d.push({ts: Date.now(), text}); store.save(id, 'diary', d);
+}
+
+function buildPrompt(s, text){
+  const mem = store.load(s.id, 'memory').map(m => `- ${m.text}`).join('\n');
+  return `${s.name}(${s.id}) 서브에이전트로 다음 업무를 처리해줘. 시작 전에 CLAUDE.md와 담당 MOC를 꼭 읽어.\n\n업무 지시:\n${text}${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
+}
+
+async function callClaude(s, text){
+  const key = localStorage.getItem('bp.apikey');
+  if (!key) return null;
+  const mem = store.load(s.id, 'memory').map(m => `- ${m.text}`).join('\n');
+  const sys = `너는 뷰티파크(피부·미용 병의원)의 AI 직원 '${s.name}'이다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: 의료광고법 준수(효과 보장·과장·치료경험담·비교비방 금지), 출처 없는 의학 주장 금지, 개인정보 익명화. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: 2000, system: sys, messages: [{role:'user', content: text}] }),
+  });
+  if (!res.ok) throw new Error('API 오류 ' + res.status);
+  const data = await res.json();
+  return data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+document.getElementById('sendBtn').addEventListener('click', async () => {
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if (!text || !selected) return;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const s = selected;
+  input.value = '';
+
+  if (mode === 'teach'){
+    const mem = store.load(s.id, 'memory'); mem.push({ts: Date.now(), text}); store.save(s.id, 'memory', mem);
+    const tasks = store.load(s.id, 'tasks');
+    tasks.push({ts: Date.now(), mode:'teach', text, status:'done', result:'배웠습니다! 앞으로의 업무에 반영하겠습니다. (기억·교훈 탭에 저장됨)'});
+    store.save(s.id, 'tasks', tasks);
+    diary(s.id, `교훈 학습: "${text.slice(0,40)}${text.length>40?'…':''}"`);
+    say(s, '🎓 배웠습니다!', 5000);
+    renderTab();
+    return;
+  }
+
+  /* task */
+  const t = {ts: Date.now(), mode:'task', text, status:'working', result:null, prompt: buildPrompt(s, text)};
+  const tasks = store.load(s.id, 'tasks'); tasks.push(t); store.save(s.id, 'tasks', tasks);
+  diary(s.id, `업무 지시 접수: "${text.slice(0,40)}${text.length>40?'…':''}"`);
+  if (s.state === 'break'){ goHome(s); }
+  s.state = 'working';
+  s.el.classList.add('working');
+  say(s, '📌 ' + text.slice(0, 24) + (text.length > 24 ? '…' : ''));
+  renderTab();
+
+  const started = Date.now();
+  let result;
+  try{
+    result = await callClaude(s, text);
+    if (result === null){
+      result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
+      await new Promise(r => setTimeout(r, 4000 + Math.random()*3000));
+    }
+  }catch(e){
+    result = '⚠️ ' + e.message + ' — API 키를 확인하세요.';
+  }
+  const all = store.load(s.id, 'tasks');
+  const mine = all.find(x => x.ts === t.ts);
+  if (mine){ mine.status = 'done'; mine.result = result; mine.dur = Math.round((Date.now() - started)/1000); }
+  store.save(s.id, 'tasks', all);
+  diary(s.id, `업무 완료 (${Math.round((Date.now() - started)/1000)}초)`);
+  s.state = 'idle';
+  s.el.classList.remove('working');
+  s.el.classList.remove('talking');
+  if (selected && selected.id === s.id && activeTab === 'work') renderTab();
+});
+
+function setKey(){
+  const cur = localStorage.getItem('bp.apikey') || '';
+  const k = prompt('Anthropic API 키 (sk-ant-…)\n비우고 확인하면 시뮬레이션 모드로 전환됩니다.\n⚠️ 키는 이 브라우저의 localStorage에만 저장됩니다.', cur);
+  if (k === null) return;
+  if (k.trim()) localStorage.setItem('bp.apikey', k.trim());
+  else localStorage.removeItem('bp.apikey');
+  alert(k.trim() ? '저장되었습니다. 이제 직원이 실제로 답합니다.' : '시뮬레이션 모드입니다.');
+}
+</script>
+</body>
+</html>
