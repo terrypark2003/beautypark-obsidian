@@ -131,6 +131,7 @@
       <div class="modes">
         <label><input type="radio" name="mode" value="task" checked> 🎯 업무 지시</label>
         <label><input type="radio" name="mode" value="teach"> 🎓 가르치기 (피드백)</label>
+        <label><input type="radio" name="mode" value="meeting"> 🗣 회의 소집</label>
       </div>
       <div class="c-row">
         <textarea id="input" placeholder="지시 내용을 입력하세요…  예) 네이버 AI탭 노출 전략 정리해줘"></textarea>
@@ -395,6 +396,32 @@ function updateKeyBadge(){
   document.getElementById('keyBtn').textContent = key ? `⚙ ${modelLabel(providerOf(key))} 연결됨` : '⚙ API 키';
 }
 
+/* ── 위키 컨텍스트: 직원이 사내 위키를 알고 답한다 (뷰티파크 볼트) ── */
+const WIKI_FOLDERS = {
+  'marketing-pd': ['01_마케팅'],
+  'consult-lead': ['02_세일즈상담'],
+  'ops-manager': ['03_교육운영'],
+  'content-writer': ['04_콘텐츠대본', '01_마케팅/의료광고법_가이드.md'],
+  'medical-factchecker': ['05_의학지식', '01_마케팅/의료광고법_가이드.md'],
+  'exec-assistant': ['06_경영', '01_마케팅/채널별_성과.md'],
+  'chief-librarian': ['00_MOC_지도', '99_Insights', '07_회의록'],
+};
+let WIKI = null;
+const wikiReady = (BRAND.key === 'beautypark')
+  ? fetch('wiki.json').then(r => r.ok ? r.json() : null).then(w => { WIKI = w; }).catch(() => null)
+  : Promise.resolve(null);
+function wikiContext(s, budget = 9000){
+  if (!WIKI) return '';
+  let text = '';
+  const pats = WIKI_FOLDERS[s.id] || [];
+  for (const [p, c] of Object.entries(WIKI)){
+    if (!pats.some(x => p.startsWith(x))) continue;
+    if (text.length + c.length > budget) break;
+    text += `\n--- ${p} ---\n${c}\n`;
+  }
+  return text;
+}
+
 /* ───────────────────────── state ───────────────────────── */
 const store = {
   load(id, key){ try{ return JSON.parse(localStorage.getItem(`bp.${id}.${key}`)) || []; }catch(e){ return []; } },
@@ -509,8 +536,8 @@ function renderWork(){
     const statusLine = t.status === 'working'
       ? `<div class="working-note">⏳ 작업 중…</div>`
       : (t.result ? `<div class="result">${esc(t.result)}</div>` : '');
-    const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">📋 Claude Code용 프롬프트 복사</button>` : '';
-    const label = t.mode === 'teach' ? '🎓 가르치기' : '🎯 업무 지시';
+    const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">${t.copyLabel || '📋 Claude Code용 프롬프트 복사'}</button>` : '';
+    const label = t.mode === 'teach' ? '🎓 가르치기' : (t.mode === 'meeting' ? '🗣 회의' : '🎯 업무 지시');
     return `<div class="task">
       <div class="meta"><span class="${dotCls}"></span> ${label} · ${fmt(t.ts)}${t.dur ? ` · 소요 ${t.dur}초` : ''}${t.model ? ` · ${esc(t.model)}` : ''}</div>
       <div class="instruction ${t.mode === 'teach' ? 'teach' : ''}">${esc(t.text)}</div>
@@ -538,8 +565,10 @@ async function callLLM(s, text){
   const key = localStorage.getItem('bp.apikey');
   if (!key) return null;
   const provider = providerOf(key);
+  await wikiReady;
+  const wiki = wikiContext(s);
   const mem = store.load(s.id, 'memory').map(m => `- ${m.text}`).join('\n');
-  const sys = `너는 ${BRAND.name}(${BRAND.biz})의 AI 직원 '${s.name}'이다. 현재 ${modelLabel(provider)} 모델로 구동되고 있다 — 어떤 모델이냐고 물으면 이 사실대로 답한다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: ${BRAND.rules}. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
+  const sys = `너는 ${BRAND.name}(${BRAND.biz})의 AI 직원 '${s.name}'이다. 현재 ${modelLabel(provider)} 모델로 구동되고 있다 — 어떤 모델이냐고 물으면 이 사실대로 답한다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: ${BRAND.rules}. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}${wiki ? `\n\n[사내 위키 발췌 — 답변의 근거로 사용하라. 문서가 seed 상태(빈 뼈대)면 그 사실을 밝히고 일반 원칙으로 답하되, 위키에 채워 넣을 내용을 함께 제안하라]\n${wiki}` : ''}`;
 
   if (provider === 'gemini'){
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
@@ -573,11 +602,108 @@ async function callLLM(s, text){
   return { text: data.content.filter(b => b.type === 'text').map(b => b.text).join('\n'), model: modelLabel('anthropic') };
 }
 
+/* ── 회의 소집 ── */
+const STAFF_KEYWORDS = {
+  'marketing-pd': ['마케팅','광고','유입','노출','네이버','검색','채널','신환'],
+  'consult-lead': ['상담','전환','가격','문의','이탈','스크립트'],
+  'ops-manager': ['직원','교육','운영','CS','프로세스','사기','노쇼','매뉴얼'],
+  'content-writer': ['콘텐츠','대본','블로그','유튜브','카드뉴스','원고','SNS'],
+  'medical-factchecker': ['의학','시술','부작용','의료법','광고법','검수','성분'],
+  'exec-assistant': ['매출','KPI','비용','수익','성과','숫자','객단가'],
+};
+function pickAttendees(rawText){
+  const m = rawText.match(/[\(（]?\s*참석\s*[:\-–]\s*([^\)）]+)[\)）]?/);
+  let topic = rawText, attendees = [];
+  if (m){
+    topic = rawText.replace(m[0], '').trim();
+    attendees = m[1].split(/[,·、\s]+/).map(n => STAFF.find(s => s.name === n.trim())).filter(Boolean);
+  }
+  if (attendees.length < 2){
+    const scored = Object.entries(STAFF_KEYWORDS)
+      .map(([id, ws]) => [id, ws.filter(w => rawText.includes(w)).length])
+      .sort((a, b) => b[1] - a[1]);
+    const picked = scored[0][1] > 0 ? scored.slice(0, 2).map(([id]) => id) : ['consult-lead', 'ops-manager'];
+    attendees = picked.map(id => STAFF.find(s => s.id === id));
+  }
+  return { topic, attendees: attendees.slice(0, 3) };
+}
+
+async function runMeeting(rawText){
+  const host = STAFF.find(x => x.id === 'chief-librarian');
+  select(host.id);
+  const { topic, attendees } = pickAttendees(rawText);
+  const names = attendees.map(a => a.name).join(' · ');
+
+  const t = {ts: Date.now(), mode:'meeting', text: `[회의] ${topic}\n👥 참석: ${names} / 사회: 비서실장`, status:'working', result:null};
+  const tasks = store.load(host.id, 'tasks'); tasks.push(t); store.save(host.id, 'tasks', tasks);
+  diary(host.id, `회의 소집: "${topic.slice(0,30)}${topic.length>30?'…':''}" (참석: ${names})`);
+  renderTab();
+
+  const secFloor = document.querySelector('#room-secretary .floor');
+  const inMeeting = [host, ...attendees];
+  inMeeting.forEach((s, i) => {
+    s.state = 'working'; s.el.classList.add('working');
+    secFloor.appendChild(s.el);
+    s.el.style.left = (15 + i * 22) + '%'; s.el.style.top = '30%';
+    say(s, '🗣 회의 중...');
+  });
+
+  const started = Date.now();
+  let transcript;
+  try{
+    const r1 = await Promise.all(attendees.map(a => callLLM(a,
+      `회의 발언 요청. 안건: "${topic}"\n너의 전문 영역 관점에서 ① 원인·현황 진단 ② 구체적 방안 2~3개(누가·뭘·어떻게) ③ 최우선 1개와 이유를 회의 말투(존댓말 구어체)로 발언하라. 추상적 조언 금지. 500자 내외.`)));
+    const r2 = await Promise.all(attendees.map((a, i) => {
+      const others = attendees.map((b, j) => i === j ? null : `[${b.name}]: ${r1[j].text}`).filter(Boolean).join('\n\n');
+      return callLLM(a, `회의 2라운드. 안건: "${topic}"\n다른 참석자의 발언:\n${others}\n\n이에 대해 ① 동의 지점 ② 이견·반박 ③ 두 안을 합친 실행 순서 제안을 회의 말투로 350자 내외.`);
+    }));
+    const allStatements = attendees.map((a, i) => `### ${a.name} (1라운드)\n${r1[i].text}\n\n### ${a.name} (2라운드)\n${r2[i].text}`).join('\n\n');
+    const syn = await callLLM(host,
+      `너는 이 회의의 사회자다. 안건: "${topic}"\n참석자 발언 전문:\n\n${allStatements}\n\n비서실장으로서 결론을 정리하라: ① 합의된 방향(실행 순서·담당 포함) ② 남은 이견(숨기지 말 것 — "대표 판단 필요"로 명시) ③ 직원별 액션 아이템. 600자 내외.`);
+
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    transcript = `📋 회의 — ${topic}\n👥 참석: ${names} / 사회: 비서실장\n\n${attendees.map((a,i)=>`【1라운드 · ${a.name}】\n${r1[i].text}`).join('\n\n')}\n\n${attendees.map((a,i)=>`【2라운드 · ${a.name}】\n${r2[i].text}`).join('\n\n')}\n\n【결론 · 비서실장】\n${syn.text}`;
+    t.prompt = `---\nstatus: draft\nupdated: ${dateStr}\nowner: AI사서\ntags: [회의록]\n---\n\n# 📋 회의록 — ${topic}\n\n- **일시**: ${dateStr}\n- **참석**: ${names} / **사회**: 비서실장\n\n${transcript.split('\n').slice(2).join('\n')}\n\n> 볼트의 02_AI_Wiki/07_회의록/${dateStr}_회의.md 로 저장하고 [[07_회의록_MOC]]에 등록하세요.`;
+    t.copyLabel = '📋 회의록 markdown 복사 (볼트 저장용)';
+    t.model = syn.model;
+  }catch(e){
+    transcript = '⚠️ 회의 진행 중 오류: ' + e.message;
+  }
+  const all = store.load(host.id, 'tasks');
+  const mine = all.find(x => x.ts === t.ts);
+  if (mine){ Object.assign(mine, t); mine.status = 'done'; mine.result = transcript; mine.dur = Math.round((Date.now() - started)/1000); }
+  store.save(host.id, 'tasks', all);
+  diary(host.id, `회의 종료 (${Math.round((Date.now() - started)/1000)}초)`);
+  inMeeting.forEach(s => { s.state = 'idle'; s.el.classList.remove('working'); s.el.classList.remove('talking'); goHome(s); });
+  if (selected && selected.id === host.id && activeTab === 'work') renderTab();
+}
+
+/* 모드에 따라 입력창 안내·버튼 활성화 */
+document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => {
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const input = document.getElementById('input');
+  if (mode === 'meeting'){
+    input.placeholder = '안건을 입력하세요…  예) 환자 수 감소 대응 (참석: 상담실장, 운영매니저)';
+    document.getElementById('sendBtn').disabled = false;
+  } else {
+    input.placeholder = '지시 내용을 입력하세요…  예) 네이버 AI탭 노출 전략 정리해줘';
+    document.getElementById('sendBtn').disabled = !selected;
+  }
+}));
+
 document.getElementById('sendBtn').addEventListener('click', async () => {
   const input = document.getElementById('input');
   const text = input.value.trim();
-  if (!text || !selected) return;
   const mode = document.querySelector('input[name=mode]:checked').value;
+  if (!text) return;
+  if (mode === 'meeting'){
+    if (!localStorage.getItem('bp.apikey')){ alert('회의는 API 키가 필요합니다. 오른쪽 위 [⚙ API 키]에 키를 넣어주세요 (Gemini 키도 됩니다).'); return; }
+    input.value = '';
+    runMeeting(text);
+    return;
+  }
+  if (!selected) return;
   const s = selected;
   input.value = '';
 
