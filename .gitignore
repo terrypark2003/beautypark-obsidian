@@ -4,3 +4,24 @@
 .obsidian/cache
 .trash/
 .DS_Store
+
+# 이미지·미디어 첨부 — 저장소가 공개(public)이므로 사진(특히 시술 전후·환자 자료)을
+# 커밋하지 않는다. 로컬 볼트에는 남고, git에는 올라가지 않음.
+# ※ 저장소를 Private으로 바꾸고 기기 간 사진 동기화를 원하면 아래 블록을 지우세요.
+_attachments/*
+!_attachments/README.md
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.heic
+*.heif
+*.bmp
+*.tif
+*.tiff
+*.mp4
+*.mov
+*.m4a
+*.mp3
+*.pdf
