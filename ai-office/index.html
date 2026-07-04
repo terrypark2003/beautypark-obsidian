@@ -103,6 +103,7 @@
   <span class="sub" id="brandSub">옵시디언 세컨브레인 · Claude</span>
   <span class="spacer"></span>
   <a class="gear" id="switchLink" style="text-decoration:none">⇄</a>
+  <button class="gear" id="syncBtn" onclick="openSync()">☁ 동기화</button>
   <button class="gear" id="keyBtn" onclick="setKey()">⚙ API 키</button>
   <span class="status-badge">영업 중</span>
 </header>
@@ -440,10 +441,76 @@ function wikiContext(s, budget = 9000){
 /* ───────────────────────── state ───────────────────────── */
 const store = {
   load(id, key){ try{ return JSON.parse(localStorage.getItem(`bp.${id}.${key}`)) || []; }catch(e){ return []; } },
-  save(id, key, v){ localStorage.setItem(`bp.${id}.${key}`, JSON.stringify(v)); },
+  save(id, key, v){ localStorage.setItem(`bp.${id}.${key}`, JSON.stringify(v)); cloud.push(); },
 };
 let selected = null;
 let activeTab = 'work';
+
+/* ───────────────────────── 어디서든 기억 (클라우드 동기화 + 내보내기/가져오기) ───────────────────────── */
+// localStorage의 bp.* 전체를 하나의 스냅샷으로 직렬화. 브랜드별로 분리 저장.
+function snapshot(){
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (k && k.startsWith('bp.') && k !== 'bp.apikey' && !k.startsWith('bp.sync.'))
+      data[k] = localStorage.getItem(k);
+  }
+  return data;
+}
+function applySnapshot(data){
+  if (!data || typeof data !== 'object') return 0;
+  let n = 0;
+  for (const [k, v] of Object.entries(data)){
+    if (k.startsWith('bp.') && k !== 'bp.apikey'){ localStorage.setItem(k, v); n++; }
+  }
+  return n;
+}
+const cloud = {
+  cfg(){ try{ return JSON.parse(localStorage.getItem('bp.sync.supabase') || 'null'); }catch(e){ return null; } },
+  rowId(){ const c = this.cfg(); return `${BRAND.key}:${(c && c.tag) || 'default'}`; },
+  headers(c){ return { apikey: c.key, Authorization: 'Bearer ' + c.key, 'content-type': 'application/json' }; },
+  async pull(){
+    const c = this.cfg(); if (!c) return null;
+    try{
+      const r = await fetch(`${c.url}/rest/v1/office_state?id=eq.${encodeURIComponent(this.rowId())}&select=data,updated_at`, { headers: this.headers(c) });
+      if (!r.ok) throw new Error('pull ' + r.status);
+      const rows = await r.json();
+      return rows[0] || null;
+    }catch(e){ console.warn('클라우드 pull 실패', e); return null; }
+  },
+  _t: null,
+  push(){ // 디바운스 업서트
+    const c = this.cfg(); if (!c) return;
+    clearTimeout(this._t);
+    this._t = setTimeout(async () => {
+      try{
+        const body = [{ id: this.rowId(), data: snapshot(), updated_at: new Date(nowTs()).toISOString() }];
+        const r = await fetch(`${c.url}/rest/v1/office_state`, {
+          method: 'POST',
+          headers: { ...this.headers(c), Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error('push ' + r.status);
+        setSyncBadge('☁ 동기화됨');
+      }catch(e){ console.warn('클라우드 push 실패', e); setSyncBadge('⚠ 동기화 실패'); }
+    }, 1200);
+  },
+  async syncNow(){
+    const c = this.cfg(); if (!c){ return false; }
+    const remote = await this.pull();
+    if (remote && remote.data) applySnapshot(remote.data);
+    await new Promise(r => setTimeout(r, 50));
+    // 로컬을 다시 올려 원격과 합치기(전체 스냅샷 last-write-wins)
+    const body = [{ id: this.rowId(), data: snapshot(), updated_at: new Date(nowTs()).toISOString() }];
+    try{
+      await fetch(`${c.url}/rest/v1/office_state`, { method:'POST', headers:{ ...this.headers(c), Prefer:'resolution=merge-duplicates' }, body: JSON.stringify(body) });
+    }catch(e){ console.warn(e); }
+    return true;
+  },
+};
+// nowTs: 테스트 가능하게 분리
+function nowTs(){ return Date.now(); }
+function setSyncBadge(t){ const b = document.getElementById('syncBtn'); if (b) b.textContent = t; }
 
 /* ───────────────────────── office render ───────────────────────── */
 const officeEl = document.getElementById('office');
@@ -781,6 +848,75 @@ function setKey(){
   updateKeyBadge();
 }
 updateKeyBadge();
+
+/* ── 동기화 UI ── */
+function openSync(){
+  const c = cloud.cfg();
+  const msg = `기억 동기화 방법을 고르세요:\n\n` +
+    `1 = 클라우드 자동 동기화 켜기/변경 (Supabase — 어느 기기든 자동)\n` +
+    `2 = 기억 내보내기 (파일로 저장, 설정 없이 안전)\n` +
+    `3 = 기억 가져오기 (다른 기기에서 내보낸 파일)\n` +
+    `4 = 지금 즉시 동기화 (클라우드 켠 경우)\n` +
+    (c ? `0 = 클라우드 동기화 끄기\n\n현재: 켜짐 (${c.tag || 'default'})` : `\n현재: 꺼짐 (로컬 저장만)`);
+  const pick = prompt(msg, '1');
+  if (pick === null) return;
+  if (pick.trim() === '1') setupSupabase();
+  else if (pick.trim() === '2') exportMemory();
+  else if (pick.trim() === '3') importMemory();
+  else if (pick.trim() === '4') { cloud.syncNow().then(ok => { alert(ok ? '동기화 완료. 새로고침하면 반영됩니다.' : '먼저 클라우드 동기화를 켜세요(1번).'); if(ok) renderTab(); }); }
+  else if (pick.trim() === '0') { localStorage.removeItem('bp.sync.supabase'); setSyncBadge('☁ 동기화'); alert('클라우드 동기화를 껐습니다. (로컬 저장은 유지)'); }
+}
+function setupSupabase(){
+  const cur = cloud.cfg() || {};
+  const url = prompt('① Supabase 프로젝트 URL\n예: https://xxxx.supabase.co\n\n(무료 프로젝트 생성 후 Settings → API 에서 확인)', cur.url || '');
+  if (url === null || !url.trim()) return;
+  const key = prompt('② Supabase anon public key\n(Settings → API → Project API keys → anon public)', cur.key || '');
+  if (key === null || !key.trim()) return;
+  const tag = prompt('③ 기억 이름표 (기기 간 같은 값이면 같은 기억을 공유)\n예: 원장, 데스크1', cur.tag || 'default');
+  if (tag === null) return;
+  localStorage.setItem('bp.sync.supabase', JSON.stringify({ url: url.trim().replace(/\/$/,''), key: key.trim(), tag: (tag.trim()||'default') }));
+  setSyncBadge('☁ 동기화 중…');
+  cloud.syncNow().then(ok => {
+    setSyncBadge(ok ? '☁ 동기화됨' : '⚠ 동기화 실패');
+    alert(ok ? '클라우드 동기화를 켰습니다!\n이제 같은 URL·키·이름표를 넣은 어느 기기에서든 학습·기억이 이어집니다.\n(다른 기기에서 처음 켜면 새로고침하세요.)\n\n※ 처음이라면 Supabase에 테이블이 필요합니다 — 아래 SQL을 SQL Editor에 한 번 실행하세요:\n\ncreate table office_state (id text primary key, data jsonb, updated_at timestamptz);\nalter table office_state enable row level security;\ncreate policy anon_all on office_state for all using (true) with check (true);' : '연결 실패. URL/키를 확인하세요.');
+    if (ok) renderTab();
+  });
+}
+function exportMemory(){
+  const blob = new Blob([JSON.stringify({ brand: BRAND.key, exportedAt: new Date(nowTs()).toISOString(), data: snapshot() }, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${BRAND.key}-사무실기억-${new Date(nowTs()).toISOString().slice(0,10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function importMemory(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try{
+        const obj = JSON.parse(rd.result);
+        const n = applySnapshot(obj.data || obj);
+        cloud.push();
+        alert(`가져오기 완료: ${n}개 항목 복원. 새로고침하면 반영됩니다.`);
+        renderTab();
+      }catch(e){ alert('파일을 읽을 수 없습니다: ' + e.message); }
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+function updateSyncBadge(){ setSyncBadge(cloud.cfg() ? '☁ 동기화됨' : '☁ 동기화'); }
+updateSyncBadge();
+// 클라우드가 켜져 있으면 시작 시 원격 기억을 끌어와 병합
+if (cloud.cfg()){
+  cloud.pull().then(remote => {
+    if (remote && remote.data){ applySnapshot(remote.data); setSyncBadge('☁ 동기화됨'); if (selected) renderTab(); }
+  });
+}
 </script>
 </body>
 </html>
