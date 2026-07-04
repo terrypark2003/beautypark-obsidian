@@ -400,20 +400,31 @@ function updateKeyBadge(){
   document.getElementById('keyBtn').textContent = key ? `⚙ ${modelLabel(providerOf(key))} 연결됨` : '⚙ API 키';
 }
 
-/* ── 위키 컨텍스트: 직원이 사내 위키를 알고 답한다 (뷰티파크 볼트) ── */
-const WIKI_FOLDERS = {
-  'marketing-pd': ['marketing', 'concepts/온라인_마케팅_운영.md', 'concepts/가치기반_프라이싱.md'],
-  'consult-lead': ['consultations', 'conditions', 'concepts/고객_페르소나.md'],
-  'ops-manager': ['operations'],
-  'content-writer': ['contents', 'marketing/의료광고법_가이드.md', 'consultations/심리_마케팅_기술.md'],
-  'medical-factchecker': ['procedures', 'conditions', 'marketing/의료광고법_가이드.md'],
-  'exec-assistant': ['management', 'concepts/클리닉_경영.md', 'marketing/채널별_성과.md'],
-  'chief-librarian': ['00_MOC_지도', 'insights', 'meetings'],
+/* ── 위키 컨텍스트: 직원이 사내 위키를 알고 답한다 (브랜드별) ── */
+const WIKI_FOLDERS_BY_BRAND = {
+  beautypark: {
+    'marketing-pd': ['marketing', 'concepts/온라인_마케팅_운영.md', 'concepts/가치기반_프라이싱.md'],
+    'consult-lead': ['consultations', 'conditions', 'concepts/고객_페르소나.md'],
+    'ops-manager': ['operations'],
+    'content-writer': ['contents', 'marketing/의료광고법_가이드.md', 'consultations/심리_마케팅_기술.md'],
+    'medical-factchecker': ['procedures', 'conditions', 'marketing/의료광고법_가이드.md'],
+    'exec-assistant': ['management', 'concepts/클리닉_경영.md', 'marketing/채널별_성과.md'],
+    'chief-librarian': ['00_MOC_지도', 'insights', 'meetings'],
+  },
+  sloboda: {
+    'marketing-pd': ['marketing', 'concepts/구매_퍼널.md'],
+    'consult-lead': ['consultations', 'concepts/구매_퍼널.md'],
+    'ops-manager': ['consultations/CS_구매전환_스크립트.md'],
+    'content-writer': ['contents', 'concepts/가격_전략.md'],
+    'medical-factchecker': ['contents/화장품법_표시광고_가이드.md', 'contents/상세페이지_공식.md'],
+    'exec-assistant': ['management', 'concepts'],
+    'chief-librarian': ['00_홈_MOC.md', 'marketing/marketing_MOC.md'],
+  },
 };
+const WIKI_FOLDERS = WIKI_FOLDERS_BY_BRAND[BRAND.key] || WIKI_FOLDERS_BY_BRAND.beautypark;
 let WIKI = null;
-const wikiReady = (BRAND.key === 'beautypark')
-  ? fetch('wiki.json').then(r => r.ok ? r.json() : null).then(w => { WIKI = w; }).catch(() => null)
-  : Promise.resolve(null);
+const _wikiFile = BRAND.key === 'sloboda' ? 'wiki-sloboda.json' : 'wiki.json';
+const wikiReady = fetch(_wikiFile).then(r => r.ok ? r.json() : null).then(w => { WIKI = w; }).catch(() => null);
 function wikiContext(s, budget = 9000){
   if (!WIKI) return '';
   let text = '';
