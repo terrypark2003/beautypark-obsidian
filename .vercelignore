@@ -3,5 +3,14 @@
 01_Raw_Data/
 02_AI_Wiki/
 .claude/
+.obsidian/
+_attachments/
 CLAUDE.md
 *.html.bak
+# 이미지·미디어는 배포에 절대 올리지 않음 (환자 사진 등 공개 서빙 방지)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.heic
