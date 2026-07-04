@@ -255,7 +255,7 @@ const STAFF = [
    job:`## 담당 업무
 - ① 넣기 루프: _INBOX 자료 → 위키 반영 → 원본 정리
 - ② 점검 루프: 모순·깨진 링크·오래된 문서 감사
-- ③ 증류 루프: 반복 패턴 → 99_Insights 인사이트화
+- ③ 증류 루프: 반복 패턴 → insights 인사이트화
 
 ## 이런 걸 시키세요
 "INBOX 새 자료 넣기 해줘" · "위키 점검해줘"
@@ -402,13 +402,13 @@ function updateKeyBadge(){
 
 /* ── 위키 컨텍스트: 직원이 사내 위키를 알고 답한다 (뷰티파크 볼트) ── */
 const WIKI_FOLDERS = {
-  'marketing-pd': ['01_마케팅'],
-  'consult-lead': ['02_세일즈상담'],
-  'ops-manager': ['03_교육운영'],
-  'content-writer': ['04_콘텐츠대본', '01_마케팅/의료광고법_가이드.md'],
-  'medical-factchecker': ['05_의학지식', '01_마케팅/의료광고법_가이드.md'],
-  'exec-assistant': ['06_경영', '01_마케팅/채널별_성과.md'],
-  'chief-librarian': ['00_MOC_지도', '99_Insights', '07_회의록'],
+  'marketing-pd': ['marketing', 'concepts/온라인_마케팅_운영.md', 'concepts/가치기반_프라이싱.md'],
+  'consult-lead': ['consultations', 'conditions', 'concepts/고객_페르소나.md'],
+  'ops-manager': ['operations'],
+  'content-writer': ['contents', 'marketing/의료광고법_가이드.md', 'consultations/심리_마케팅_기술.md'],
+  'medical-factchecker': ['procedures', 'conditions', 'marketing/의료광고법_가이드.md'],
+  'exec-assistant': ['management', 'concepts/클리닉_경영.md', 'marketing/채널별_성과.md'],
+  'chief-librarian': ['00_MOC_지도', 'insights', 'meetings'],
 };
 let WIKI = null;
 const wikiReady = (BRAND.key === 'beautypark')
@@ -668,7 +668,7 @@ async function runMeeting(rawText){
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     transcript = `📋 회의 — ${topic}\n👥 참석: ${names} / 사회: 비서실장\n\n${attendees.map((a,i)=>`【1라운드 · ${a.name}】\n${r1[i].text}`).join('\n\n')}\n\n${attendees.map((a,i)=>`【2라운드 · ${a.name}】\n${r2[i].text}`).join('\n\n')}\n\n【결론 · 비서실장】\n${syn.text}`;
-    t.prompt = `---\nstatus: draft\nupdated: ${dateStr}\nowner: AI사서\ntags: [회의록]\n---\n\n# 📋 회의록 — ${topic}\n\n- **일시**: ${dateStr}\n- **참석**: ${names} / **사회**: 비서실장\n\n${transcript.split('\n').slice(2).join('\n')}\n\n> 볼트의 02_AI_Wiki/07_회의록/${dateStr}_회의.md 로 저장하고 [[07_회의록_MOC]]에 등록하세요.`;
+    t.prompt = `---\nstatus: draft\nupdated: ${dateStr}\nowner: AI사서\ntags: [회의록]\n---\n\n# 📋 회의록 — ${topic}\n\n- **일시**: ${dateStr}\n- **참석**: ${names} / **사회**: 비서실장\n\n${transcript.split('\n').slice(2).join('\n')}\n\n> 볼트의 02_AI_Wiki/meetings/${dateStr}_회의.md 로 저장하고 [[meetings_MOC]]에 등록하세요.`;
     t.copyLabel = '📋 회의록 markdown 복사 (볼트 저장용)';
     t.model = syn.model;
   }catch(e){
