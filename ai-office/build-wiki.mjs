@@ -10,20 +10,26 @@ import { join, relative, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const wikiDir = join(root, '02_AI_Wiki');
-const out = {};
+const aiOffice = join(root, 'ai-office');
 
-function walk(dir){
-  for (const name of readdirSync(dir)){
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) walk(p);
-    else if (name.endsWith('.md')){
-      const rel = relative(wikiDir, p).replaceAll('\\', '/');
-      out[rel] = readFileSync(p, 'utf8');
+function bundle(wikiDir){
+  const out = {};
+  (function walk(dir){
+    for (const name of readdirSync(dir)){
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (name.endsWith('.md')) out[relative(wikiDir, p).replaceAll('\\', '/')] = readFileSync(p, 'utf8');
     }
-  }
+  })(wikiDir);
+  return out;
 }
-walk(wikiDir);
 
-writeFileSync(join(root, 'ai-office', 'wiki.json'), JSON.stringify(out, null, 1), 'utf8');
-console.log(`wiki.json 생성: 문서 ${Object.keys(out).length}개`);
+// 뷰티파크(병원): 02_AI_Wiki
+const bp = bundle(join(root, '02_AI_Wiki'));
+writeFileSync(join(aiOffice, 'wiki.json'), JSON.stringify(bp, null, 1), 'utf8');
+console.log(`wiki.json (뷰티파크): 문서 ${Object.keys(bp).length}개`);
+
+// 슬로보다(화장품 이커머스): ai-office/sloboda-wiki
+const sb = bundle(join(aiOffice, 'sloboda-wiki'));
+writeFileSync(join(aiOffice, 'wiki-sloboda.json'), JSON.stringify(sb, null, 1), 'utf8');
+console.log(`wiki-sloboda.json (슬로보다): 문서 ${Object.keys(sb).length}개`);

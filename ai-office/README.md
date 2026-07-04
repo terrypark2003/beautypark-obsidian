@@ -25,8 +25,12 @@ python3 -m http.server 8000   # → http://localhost:8000/ai-office/
 `wiki.json`(빌드 산출물)에 `02_AI_Wiki` 문서가 묶여 있어, 뷰티파크 사무실의 직원들은 자기 담당 위키 문서를 근거로 답합니다. 위키를 수정한 뒤에는:
 
 ```bash
-node ai-office/build-wiki.mjs   # wiki.json 재생성 → 커밋하면 사이트에 반영
+node ai-office/build-wiki.mjs   # wiki.json(뷰티파크) + wiki-sloboda.json(슬로보다) 재생성 → 커밋하면 사이트에 반영
 ```
+
+- 뷰티파크(병원) 지식: `02_AI_Wiki/` → `wiki.json`
+- 슬로보다(화장품 이커머스) 지식: `ai-office/sloboda-wiki/` → `wiki-sloboda.json` (병원 볼트와 분리)
+- 각 사무실은 도메인/`?brand=`에 맞는 위키를 자동으로 불러옵니다.
 
 (비서실장에게 "넣기 해줘"를 시킬 때 마지막에 이 스크립트 실행을 함께 부탁하면 자동화됩니다.)
 
