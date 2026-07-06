@@ -19,6 +19,7 @@ tags: [MOC, 홈]
 - ✍️ [[contents_MOC]] — 콘텐츠 공식 (VSL, 기획보드)
 - 📋 [[operations_MOC]] — 운영·교육 (SOP, 온보딩, 환불규정)
 - 📊 [[management_MOC]] — 경영·KPI
+- ⚖️ [[legal_MOC]] — 법무·국가법령정보 조회 (법무팀)
 - 🗣 [[meetings_MOC]] — AI 직원 회의록 (`/회의`)
 - 🔍 [[insights_MOC]] — 인사이트·시스템 로그
 
