@@ -1,3 +1,7 @@
+# 비밀 키 — 공개 저장소에 절대 커밋 금지 (국가법령정보 OC 키 등)
+.claude/law-api.local.txt
+*.local.txt
+
 # Obsidian 개인 설정 (기기별로 달라지는 것만 제외)
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
