@@ -94,6 +94,34 @@
   textarea:focus{outline:none; border-color:#d8b8a8;}
   #sendBtn{width:84px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; cursor:pointer; font-family:inherit;}
   #sendBtn:disabled{background:#dcd4c6; cursor:not-allowed;}
+
+  /* ── 모바일용 직원 카드 그리드 (좁은 화면에서만 노출) ── */
+  #staffGrid{display:none;}
+  #backBtn{display:none;}
+  .scard{display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--line); border-radius:12px; background:#fff; cursor:pointer; text-align:left; min-height:56px;}
+  .scard:active{background:var(--accent-soft);}
+  .scard.on{border-color:var(--accent); background:var(--accent-soft);}
+  .scard .ava{width:34px; height:34px; border-radius:50%; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;}
+  .scard .nm{display:block; font-size:13px; font-weight:600; color:var(--ink);}
+  .scard .rl{display:block; font-size:11px; color:var(--sub); margin-top:2px; line-height:1.35;}
+  .grid-team{grid-column:1 / -1; font-size:11px; color:var(--sub); margin:8px 2px 0; font-weight:600;}
+
+  @media (max-width: 820px){
+    body{height:auto; min-height:100vh; overflow:auto;}
+    header{flex-wrap:wrap; padding:12px 14px; gap:8px;}
+    header h1{font-size:19px;}
+    main{flex-direction:column; padding:0 10px 12px; overflow:visible;}
+    #office{display:none;}
+    #staffGrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; background:var(--office); border-radius:14px; padding:12px;}
+    #panel{border-radius:14px; min-height:auto;}
+    #tabBody{max-height:none;}
+    .tabs{flex-wrap:wrap;}
+    #backBtn{display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); background:#faf8f2; border-radius:8px; padding:6px 10px; font-size:12px; color:var(--ink); cursor:pointer; margin-bottom:2px;}
+    textarea{font-size:16px; height:72px;}       /* 16px: iOS 자동 확대 방지 */
+    #sendBtn{width:72px; font-size:16px;}
+    .modes{gap:12px; flex-wrap:wrap;}
+    .p-head{padding:14px 16px 10px;}
+  }
 </style>
 </head>
 <body>
@@ -110,13 +138,15 @@
 
 <main>
   <div id="office"><div class="hint">직원을 클릭해 업무를 지시하세요</div></div>
+  <div id="staffGrid"></div>
 
   <div id="panel">
     <div class="p-head">
       <div class="p-avatar" id="pAvatar">🏢</div>
-      <div>
+      <div style="flex:1">
+        <button id="backBtn" onclick="showStaffList()">← 직원 목록</button>
         <h2 id="pName">직원을 선택하세요</h2>
-        <p id="pDesc">왼쪽 사무실에서 직원을 클릭하면 업무를 지시할 수 있습니다</p>
+        <p id="pDesc">직원을 선택하면 업무를 지시할 수 있습니다</p>
       </div>
     </div>
     <div class="tabs">
@@ -151,7 +181,8 @@ const ROOMS = [
   {id:'studio',    name:'콘텐츠 스튜디오'},
   {id:'medical',   name:'메디컬 랩'},
   {id:'strategy',  name:'경영전략실'},
-  {id:'legal',     name:'법무실'},
+  {id:'legal',     name:'법무실 (1차)'},
+  {id:'legal2',    name:'법무 2차실'},
   {id:'secretary', name:'비서실'},
   {id:'lounge',    name:'휴게실'},
 ];
@@ -269,6 +300,49 @@ const STAFF = [
 
 ## 에이전트 파일
 .claude/agents/legal-officer.md (+ legal-medical / legal-labor / legal-tax)`},
+  {id:'legal-medical', name:'의료법 2차', emoji:'🩺', room:'legal2', shirt:'#6b8fb5',
+   desc:'법무 2차실 · 의료법·의료광고법·개인정보보호법 심층 검토 전문가. 1차가 중요도 높다고 올린 의료 사안의 최종 법령 검토.',
+   job:`## 담당 (2차 심층)
+- 의료법 §56(의료광고)·시행령/시행규칙, 의료광고 사전심의
+- 개인정보 보호법 (상담녹취·CS·시술 전후사진)
+
+## 이런 걸 시키세요
+"이 광고 심의 대상이야? 의료법 근거로 봐줘"
+
+## 철칙
+- 국가법령정보 API 원문 조회 후 인용(조·항+시행일)
+- 리스크 크면 "심의기구·변호사 확인 필요" 명시
+
+## 에이전트 파일
+.claude/agents/legal-medical.md`},
+  {id:'legal-labor', name:'노무 2차', emoji:'👥', room:'legal2', shirt:'#8a7bb0',
+   desc:'법무 2차실 · 근로기준법·노무 심층 검토 전문가. 채용·해고·징계·근로계약·임금·근로시간·4대보험 사안의 최종 검토.',
+   job:`## 담당 (2차 심층)
+- 근로기준법(근로계약·임금·근로시간·해고·연차), 최저임금·퇴직급여
+- 상시근로자 수(5인 기준)·업종별 적용 차이 먼저 확인
+
+## 이런 걸 시키세요
+"직원 연차·연장수당 규정 근거 찾아줘"
+
+## 철칙
+- 국가법령정보 API 원문 조회 후 인용, 실제 조치는 "노무사 확인 필요" 명시
+
+## 에이전트 파일
+.claude/agents/legal-labor.md`},
+  {id:'legal-tax', name:'세무 2차', emoji:'💰', room:'legal2', shirt:'#b59a5a',
+   desc:'법무 2차실 · 세법 심층 검토 전문가. 부가세·소득세·비용처리·현금영수증·사업구조 사안의 최종 검토.',
+   job:`## 담당 (2차 심층)
+- 부가가치세법(미용시술 과세/면세 구분), 소득세법, 법인세법, 조세특례
+- 비용 인정 요건·세무조사 리스크
+
+## 이런 걸 시키세요
+"미용시술 부가세 과세야? 법령 근거로 봐줘"
+
+## 철칙
+- 국가법령정보 API 원문 조회 후 인용, 신고·절세는 "세무사 확인 필요" 명시
+
+## 에이전트 파일
+.claude/agents/legal-tax.md`},
   {id:'chief-librarian', name:'비서실장', emoji:'📚', room:'secretary', shirt:'#5f7a61',
    desc:'비서실 · 세컨브레인 자체를 관리하는 직원. 넣기·점검 루프 실행, 직원 기억 관리, 주간 감사 보고.',
    job:`## 담당 업무
@@ -442,6 +516,9 @@ const WIKI_FOLDERS_BY_BRAND = {
     'medical-factchecker': ['procedures', 'conditions', 'marketing/의료광고법_가이드.md'],
     'exec-assistant': ['management', 'concepts/클리닉_경영.md', 'marketing/채널별_성과.md'],
     'legal-officer': ['legal', 'marketing/의료광고법_가이드.md'],
+    'legal-medical': ['legal', 'marketing/의료광고법_가이드.md'],
+    'legal-labor': ['legal', 'operations'],
+    'legal-tax': ['legal', 'management'],
     'chief-librarian': ['00_MOC_지도', 'insights', 'meetings'],
   },
   sloboda: {
@@ -561,13 +638,18 @@ ROOMS.forEach(r => {
 const lounge = document.querySelector('#room-lounge .floor');
 lounge.insertAdjacentHTML('beforeend', `<div class="coffee" style="left:18%;top:18%"></div><div class="coffee-label" style="left:8%;top:62%">☕ 커피머신</div>`);
 
+// 한 방에 여러 직원이 있으면 가로로 고르게 분산 (겹침 방지)
+const _roomCount = {}; STAFF.forEach(s => { _roomCount[s.room] = (_roomCount[s.room]||0)+1; });
+const _roomIdx = {};
 STAFF.forEach(s => {
   const floor = document.querySelector(`#room-${s.room} .floor`);
-  floor.insertAdjacentHTML('beforeend', `<div class="desk" style="left:30%;top:52%"></div>`);
+  const n = _roomCount[s.room]; const i = (_roomIdx[s.room] = (_roomIdx[s.room]??-1)+1);
+  const cx = n === 1 ? 38 : Math.round(100 * (i+1)/(n+1)) - 4; // 방 안 x 위치(%)
+  floor.insertAdjacentHTML('beforeend', `<div class="desk" style="left:${Math.max(3,cx-8)}%;top:52%"></div>`);
   const c = document.createElement('div');
   c.className = 'char'; c.id = 'char-' + s.id;
   c.style.setProperty('--shirt', s.shirt);
-  c.style.left = '38%'; c.style.top = '18%';
+  c.style.left = cx + '%'; c.style.top = '18%';
   c.innerHTML = `<span class="bubble"></span><span class="nametag">${s.name}</span><span class="dot"></span>
     <div class="px hair"></div><div class="px face"></div><div class="px torso"></div><div class="px legs"></div><div class="px shadow"></div>`;
   c.addEventListener('click', () => select(s.id));
@@ -604,15 +686,50 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   t.classList.add('active'); activeTab = t.dataset.tab; renderTab();
 }));
 
+/* ── 모바일 직원 카드 그리드 ── */
+const ROOM_NAME = {}; ROOMS.forEach(r => ROOM_NAME[r.id] = r.name);
+function buildStaffGrid(){
+  const g = document.getElementById('staffGrid');
+  if (!g) return;
+  // 방(팀) 순서대로, 휴게실 제외
+  const order = ROOMS.map(r => r.id).filter(id => id !== 'lounge');
+  let html = '';
+  order.forEach(room => {
+    const members = STAFF.filter(s => s.room === room);
+    if (!members.length) return;
+    html += `<div class="grid-team">${esc(ROOM_NAME[room])}</div>`;
+    members.forEach(s => {
+      const role = (s.desc.split('·').slice(1).join('·').trim() || s.desc).replace(/\.$/,'').slice(0, 34);
+      html += `<button class="scard" id="scard-${s.id}" onclick="select('${s.id}')">
+        <span class="ava">${s.emoji}</span>
+        <span><span class="nm">${esc(s.name)}</span><span class="rl">${esc(role)}</span></span>
+      </button>`;
+    });
+  });
+  g.innerHTML = html;
+}
+
 function select(id){
   selected = STAFF.find(s => s.id === id);
   document.querySelectorAll('.room').forEach(r => r.classList.remove('highlight'));
-  document.getElementById('room-' + selected.room).classList.add('highlight');
+  const room = document.getElementById('room-' + selected.room);
+  if (room) room.classList.add('highlight');
+  document.querySelectorAll('.scard').forEach(c => c.classList.remove('on'));
+  const card = document.getElementById('scard-' + selected.id);
+  if (card) card.classList.add('on');
   document.getElementById('pAvatar').textContent = selected.emoji;
   document.getElementById('pName').textContent = selected.name;
   document.getElementById('pDesc').textContent = selected.desc;
   document.getElementById('sendBtn').disabled = false;
   renderTab();
+  // 모바일: 선택하면 패널로 스크롤
+  if (window.matchMedia('(max-width: 820px)').matches){
+    document.getElementById('panel').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+// 모바일: 직원 목록으로 되돌아가기
+function showStaffList(){
+  document.getElementById('staffGrid').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function fmt(ts){
@@ -965,6 +1082,7 @@ function importMemory(){
 }
 function updateSyncBadge(){ setSyncBadge(cloud.cfg() ? '☁ 동기화됨' : '☁ 동기화'); }
 updateSyncBadge();
+buildStaffGrid();  // 모바일 직원 카드
 // 클라우드가 켜져 있으면 시작 시 원격 기억을 끌어와 병합
 if (cloud.cfg()){
   cloud.pull().then(remote => {
