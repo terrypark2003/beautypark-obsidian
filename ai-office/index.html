@@ -122,6 +122,58 @@
     .modes{gap:12px; flex-wrap:wrap;}
     .p-head{padding:14px 16px 10px;}
   }
+
+  /* ── 이벤트 카탈로그 (경쟁사 벤치마킹 보드) ── */
+  #catalogOverlay{position:fixed; inset:0; background:rgba(26,22,18,.55); z-index:50; display:none; padding:24px;}
+  #catalogOverlay.open{display:flex;}
+  .cat-panel{background:var(--bg); border-radius:16px; width:100%; max-width:1080px; margin:auto; max-height:calc(100vh - 48px); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .cat-head{display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); background:var(--panel);}
+  .cat-head h2{font-size:18px;}
+  .cat-head .sub{font-size:12px; color:var(--sub);}
+  .cat-head .spacer{flex:1;}
+  .cat-x{cursor:pointer; border:1px solid var(--line); background:#fff; border-radius:999px; width:32px; height:32px; font-size:15px; color:var(--sub);}
+  .cat-body{padding:16px 20px; overflow:auto;}
+  .cat-drop{border:2px dashed #c9b8a8; border-radius:12px; padding:18px; text-align:center; color:var(--sub); font-size:13px; line-height:1.7; background:#faf6ec; cursor:pointer; transition:.15s;}
+  .cat-drop.drag{border-color:var(--accent); background:var(--accent-soft); color:var(--ink);}
+  .cat-drop b{color:var(--ink);}
+  .cat-tools{display:flex; gap:8px; margin:14px 0; flex-wrap:wrap; align-items:center;}
+  .cat-tools input[type=search]{flex:1; min-width:150px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:#fff;}
+  .cat-tools select{padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:#fff;}
+  .cat-count{font-size:12px; color:var(--sub);}
+  .cat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:14px;}
+  .cat-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; cursor:pointer; transition:.12s; display:flex; flex-direction:column;}
+  .cat-card:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.1);}
+  .cat-card .thumb{width:100%; aspect-ratio:4/3; object-fit:cover; background:#e9e2d4; display:block;}
+  .cat-card .meta{padding:9px 11px;}
+  .cat-card .v{font-size:11px; color:var(--accent); font-weight:600;}
+  .cat-card .t{font-size:13px; margin:2px 0 5px; line-height:1.3; color:var(--ink); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .cat-badge{display:inline-block; font-size:10px; background:var(--accent-soft); color:#b64a34; border-radius:999px; padding:2px 8px;}
+  .cat-empty{grid-column:1/-1; text-align:center; color:var(--sub); padding:40px 0; font-size:13px; line-height:1.8;}
+  /* 상세·편집 */
+  #catEdit{position:fixed; inset:0; z-index:60; display:none; padding:24px; background:rgba(26,22,18,.6);}
+  #catEdit.open{display:flex;}
+  #catEdit .box{background:var(--bg); border-radius:14px; width:100%; max-width:820px; margin:auto; max-height:calc(100vh - 48px); overflow:auto; display:grid; grid-template-columns:1fr 1fr;}
+  #catEdit .pic{background:#26221e; display:flex; align-items:center; justify-content:center; padding:14px;}
+  #catEdit .pic img{max-width:100%; max-height:72vh; border-radius:8px;}
+  #catEdit .form{padding:18px 20px;}
+  #catEdit .form h3{font-size:16px; margin-bottom:10px;}
+  #catEdit label{display:block; font-size:12px; color:var(--sub); margin:10px 0 3px;}
+  #catEdit input, #catEdit textarea, #catEdit select{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; background:#fff; font-family:inherit; color:var(--ink);}
+  #catEdit textarea{height:64px; resize:vertical;}
+  #catEdit .btns{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  #catEdit .btns button{padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:13px; color:var(--ink);}
+  #catEdit .btns .primary{flex:1; background:var(--accent); color:#fff; border-color:var(--accent);}
+  #catEdit .btns .bench{flex:1 1 100%; background:#33302a; color:#fff; border-color:#33302a;}
+  #catEdit .btns .danger{color:#c0392b; border-color:#e6b8b0;}
+  @media (max-width: 820px){
+    #catalogOverlay{padding:0;}
+    .cat-panel{max-height:100vh; border-radius:0;}
+    #catEdit{padding:0;}
+    #catEdit .box{grid-template-columns:1fr; max-height:100vh; border-radius:0;}
+    #catEdit .pic{max-height:38vh;}
+    .cat-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px;}
+    #catEdit input, #catEdit textarea, #catEdit select{font-size:16px;}
+  }
 </style>
 </head>
 <body>
@@ -131,6 +183,7 @@
   <span class="sub" id="brandSub">옵시디언 세컨브레인 · Claude</span>
   <span class="spacer"></span>
   <a class="gear" id="switchLink" style="text-decoration:none">⇄</a>
+  <button class="gear" id="catalogBtn" onclick="openCatalog()">🗂 이벤트 카탈로그</button>
   <button class="gear" id="syncBtn" onclick="openSync()">☁ 동기화</button>
   <button class="gear" id="keyBtn" onclick="setKey()">⚙ API 키</button>
   <span class="status-badge">영업 중</span>
@@ -171,6 +224,55 @@
     </div>
   </div>
 </main>
+
+<!-- 이벤트 카탈로그 (경쟁사 벤치마킹 보드) -->
+<div id="catalogOverlay">
+  <div class="cat-panel">
+    <div class="cat-head">
+      <span style="font-size:22px">🗂</span>
+      <div>
+        <h2>이벤트 카탈로그</h2>
+        <div class="sub" id="catSub">주변 업체 이벤트를 캡처해 모아두고, 우리 이벤트 기획에 참고하세요</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="cat-x" onclick="closeCatalog()">✕</button>
+    </div>
+    <div class="cat-body">
+      <div class="cat-drop" id="catDrop">
+        📋 <b>Ctrl+V</b> 로 캡처 이미지를 붙여넣거나, 여기를 <b>클릭</b>해 파일 선택 · 드래그 앤 드롭<br>
+        <span style="font-size:11px">(경쟁사 이벤트 포스터·카드뉴스·SNS 캡처를 그대로 붙여넣으면 됩니다)</span>
+      </div>
+      <div class="cat-tools">
+        <input type="search" id="catSearch" placeholder="🔍 업체·제목·태그·메모 검색" oninput="renderCatalog()">
+        <select id="catFilter" onchange="renderCatalog()"></select>
+        <span class="cat-count" id="catCount"></span>
+      </div>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+  </div>
+</div>
+<!-- 상세·편집 -->
+<div id="catEdit">
+  <div class="box">
+    <div class="pic"><img id="ceImg" alt="이벤트 이미지"></div>
+    <div class="form">
+      <h3 id="ceHead">이벤트 정보</h3>
+      <label>업체명</label><input id="ceVendor" placeholder="예) OO의원, △△피부과">
+      <label>이벤트 제목</label><input id="ceTitle" placeholder="예) 여름맞이 물광주사 3+1">
+      <label>분류</label><select id="ceCat"></select>
+      <label>혜택·가격</label><input id="ceBenefit" placeholder="예) 39,000원 / 1+1 / 첫방문 50%">
+      <label>메모 (벤치마킹 포인트)</label><textarea id="ceMemo" placeholder="따라 할 점, 우리 버전 아이디어, 주의할 점(광고법 등)"></textarea>
+      <label>태그 (쉼표로 구분)</label><input id="ceTags" placeholder="여름, 물광, 신규, 인스타">
+      <label>출처</label><input id="ceSource" placeholder="예) 인스타 @xxx / 네이버플레이스 / 전단">
+      <div class="btns">
+        <button class="bench" onclick="benchmarkFromCatalog()">🎯 마케팅PD에 벤치마킹 분석 맡기기</button>
+        <button class="primary" onclick="saveCatalogEntry()">저장</button>
+        <button onclick="closeCatEdit()">닫기</button>
+        <button class="danger" onclick="deleteCatalogEntry()">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ───────────────────────── data ───────────────────────── */
@@ -1088,6 +1190,172 @@ function importMemory(){
 }
 function updateSyncBadge(){ setSyncBadge(cloud.cfg() ? '☁ 동기화됨' : '☁ 동기화'); }
 updateSyncBadge();
+
+/* ───────────────────────── 이벤트 카탈로그 (경쟁사 벤치마킹 보드) ─────────────────────────
+   주변 업체 이벤트를 캡처해 Ctrl+V로 붙여넣어 모으고, 우리 이벤트 기획에 참고한다.
+   이미지는 브라우저에서 압축(최대 1100px / JPEG)해 localStorage 'bp.<brand>.catalog'에 저장 →
+   기존 Supabase 스냅샷 동기화에 함께 실려 기기 간 이어진다. */
+const CAT_CATEGORIES = ['시즌·명절','신규오픈·첫방문','시술할인','패키지·묶음','멤버십·재방문','리뷰·후기','SNS·참여','제휴·협찬','가격표·메뉴','기타'];
+const CAT_KEY = () => `bp.${BRAND.key}.catalog`;
+function catLoad(){ try{ return JSON.parse(localStorage.getItem(CAT_KEY())) || []; }catch(e){ return []; } }
+function catSave(list){
+  try{ localStorage.setItem(CAT_KEY(), JSON.stringify(list)); cloud.push(); }
+  catch(e){ alert('저장 공간이 부족합니다. 오래된 자료를 삭제하거나 [☁ 동기화 → 내보내기]로 백업 후 정리하세요.'); }
+}
+// 캔버스로 리사이즈+JPEG 압축 → 스냅샷 동기화가 무거워지지 않게 함
+function compressImage(blob, maxDim=1100, quality=0.72){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.max(1, Math.round(w*scale)); h = Math.max(1, Math.round(h*scale));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(cv.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지를 읽을 수 없습니다')); };
+    img.src = url;
+  });
+}
+async function addCatalogImage(blob){
+  if (!blob || !blob.type || !blob.type.startsWith('image/')) return;
+  try{
+    const dataUrl = await compressImage(blob);
+    const entry = { id:'ev_'+nowTs()+'_'+Math.floor(Math.random()*1e4), img:dataUrl,
+      vendor:'', title:'', category:CAT_CATEGORIES[2], benefit:'', memo:'', tags:'', source:'',
+      addedAt:new Date(nowTs()).toISOString() };
+    const list = catLoad(); list.unshift(entry); catSave(list);
+    if (!catalogIsOpen()) openCatalog(); else renderCatalog();
+    openCatEdit(entry.id, true);   // 새 항목 → 바로 정보 입력창
+  }catch(e){ alert('이미지 추가 실패: ' + e.message); }
+}
+function catalogIsOpen(){ return document.getElementById('catalogOverlay').classList.contains('open'); }
+function openCatalog(){
+  document.getElementById('catSub').textContent = BRAND.key === 'sloboda'
+    ? '경쟁 화장품 브랜드의 프로모션·이벤트를 캡처해 모아두고, 우리 캠페인 기획에 참고하세요'
+    : '주변 업체 이벤트를 캡처해 모아두고, 우리 이벤트 기획에 참고하세요';
+  document.getElementById('catalogOverlay').classList.add('open');
+  buildCatSelects(); renderCatalog();
+}
+function closeCatalog(){ document.getElementById('catalogOverlay').classList.remove('open'); }
+function buildCatSelects(){
+  const f = document.getElementById('catFilter');
+  if (!f.dataset.built){
+    f.innerHTML = '<option value="">전체 분류</option>' + CAT_CATEGORIES.map(c=>`<option>${c}</option>`).join('');
+    document.getElementById('ceCat').innerHTML = CAT_CATEGORIES.map(c=>`<option>${c}</option>`).join('');
+    f.dataset.built = '1';
+  }
+}
+function renderCatalog(){
+  const grid = document.getElementById('catGrid');
+  const q = (document.getElementById('catSearch').value||'').trim().toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  let list = catLoad();
+  if (cat) list = list.filter(e => e.category === cat);
+  if (q) list = list.filter(e => [e.vendor,e.title,e.tags,e.memo,e.benefit,e.source].join(' ').toLowerCase().includes(q));
+  document.getElementById('catCount').textContent = `${list.length}개`;
+  if (!list.length){
+    grid.innerHTML = `<div class="cat-empty">아직 저장된 이벤트가 없습니다.<br>주변 업체 이벤트를 캡처해 <b>Ctrl+V</b>로 붙여넣어 보세요.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(e => `
+    <div class="cat-card" onclick="openCatEdit('${e.id}')">
+      <img class="thumb" src="${e.img}" alt="">
+      <div class="meta">
+        <div class="v">${esc(e.vendor)||'업체 미입력'}</div>
+        <div class="t">${esc(e.title)||'제목을 입력하세요'}</div>
+        <span class="cat-badge">${esc(e.category)||'기타'}</span>
+      </div>
+    </div>`).join('');
+}
+let _catEditId = null;
+function openCatEdit(id, isNew){
+  const e = catLoad().find(x => x.id === id); if (!e) return;
+  _catEditId = id;
+  document.getElementById('ceImg').src = e.img;
+  document.getElementById('ceHead').textContent = isNew ? '새 이벤트 — 정보를 채워주세요' : '이벤트 정보';
+  document.getElementById('ceVendor').value = e.vendor || '';
+  document.getElementById('ceTitle').value = e.title || '';
+  document.getElementById('ceCat').value = e.category || CAT_CATEGORIES[0];
+  document.getElementById('ceBenefit').value = e.benefit || '';
+  document.getElementById('ceMemo').value = e.memo || '';
+  document.getElementById('ceTags').value = e.tags || '';
+  document.getElementById('ceSource').value = e.source || '';
+  document.getElementById('catEdit').classList.add('open');
+}
+function closeCatEdit(){ document.getElementById('catEdit').classList.remove('open'); _catEditId = null; }
+function persistCatEdit(){
+  const list = catLoad(); const e = list.find(x => x.id === _catEditId); if (!e) return null;
+  e.vendor = document.getElementById('ceVendor').value.trim();
+  e.title = document.getElementById('ceTitle').value.trim();
+  e.category = document.getElementById('ceCat').value;
+  e.benefit = document.getElementById('ceBenefit').value.trim();
+  e.memo = document.getElementById('ceMemo').value.trim();
+  e.tags = document.getElementById('ceTags').value.trim();
+  e.source = document.getElementById('ceSource').value.trim();
+  catSave(list); return e;
+}
+function saveCatalogEntry(){ if (persistCatEdit()){ closeCatEdit(); renderCatalog(); } }
+function deleteCatalogEntry(){
+  if (!_catEditId || !confirm('이 이벤트 자료를 삭제할까요?')) return;
+  catSave(catLoad().filter(x => x.id !== _catEditId));
+  closeCatEdit(); renderCatalog();
+}
+// 카탈로그 항목 → 마케팅PD에게 벤치마킹 분석 지시(우리 버전 기획안 요청)
+function benchmarkFromCatalog(){
+  const e = persistCatEdit(); if (!e) return;
+  const pd = STAFF.find(s => s.id === 'marketing-pd') || STAFF[0];
+  const lawLine = BRAND.key === 'sloboda'
+    ? '④ 화장품법 표시·광고 리스크 체크(의약품 오인·효능 단정 표현 금지)'
+    : '④ 의료광고법 리스크 체크(효과 보장·과장·비교·치료경험담 금지)';
+  const msg = `[경쟁사 이벤트 벤치마킹 요청]\n`
+    + `아래는 주변 업체의 이벤트 자료입니다. 우리(${BRAND.name})가 참고해 비슷한 이벤트를 기획하려 합니다.\n\n`
+    + `- 업체: ${e.vendor||'(미상)'}\n- 이벤트: ${e.title||'(제목 미입력)'}\n- 분류: ${e.category}\n`
+    + `- 혜택/가격: ${e.benefit||'-'}\n- 메모: ${e.memo||'-'}\n- 출처: ${e.source||'-'}\n\n`
+    + `요청: ① 이 이벤트가 통하는 이유(고객 심리·훅) ② 우리 버전 기획안 2~3개(제목·혜택·기간·타겟) ③ 실행 채널(네이버플레이스·블로그·인스타) ${lawLine}`;
+  closeCatEdit(); closeCatalog();
+  select(pd.id);
+  const taskRadio = document.querySelector('input[name=mode][value=task]');
+  if (taskRadio) taskRadio.checked = true;
+  const input = document.getElementById('input');
+  input.value = msg;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+  input.scrollIntoView({behavior:'smooth', block:'center'});
+}
+// 입력: 붙여넣기(전역) · 클릭 파일선택 · 드래그앤드롭
+document.addEventListener('paste', async (e) => {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  let blob = null;
+  for (const it of items){ if (it.type && it.type.startsWith('image/')){ blob = it.getAsFile(); break; } }
+  if (!blob) return;                 // 이미지가 아니면(텍스트 등) 기본 붙여넣기 유지
+  e.preventDefault();
+  await addCatalogImage(blob);        // 캡처 이미지는 카탈로그로
+});
+(function wireCatalogInputs(){
+  const drop = document.getElementById('catDrop');
+  drop.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+    inp.onchange = async () => { for (const f of inp.files) await addCatalogImage(f); };
+    inp.click();
+  });
+  ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', async e => {
+    const files = (e.dataTransfer && e.dataTransfer.files) || [];
+    for (const f of files) await addCatalogImage(f);
+  });
+})();
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('catEdit').classList.contains('open')) closeCatEdit();
+  else if (catalogIsOpen()) closeCatalog();
+});
+
 buildStaffGrid();  // 모바일 직원 카드
 // 클라우드가 켜져 있으면 시작 시 원격 기억을 끌어와 병합
 if (cloud.cfg()){
