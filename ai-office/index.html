@@ -814,13 +814,17 @@ async function callLLM(s, text){
       body: JSON.stringify({
         system_instruction: { parts: [{ text: sys }] },
         contents: [{ role: 'user', parts: [{ text }] }],
-        generationConfig: { maxOutputTokens: 2000 },
+        // maxOutputTokens를 넉넉히 주고, 2.5-flash의 '생각(thinking)' 토큰이
+        // 답변 토큰을 잡아먹어 문장이 중간에 잘리지 않도록 thinkingBudget=0으로 끈다.
+        generationConfig: { maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
       }),
     });
     if (!res.ok) throw new Error('Gemini API 오류 ' + res.status);
     const data = await res.json();
-    const out = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n').trim();
+    const cand = data.candidates?.[0];
+    let out = (cand?.content?.parts || []).map(p => p.text || '').join('\n').trim();
     if (!out) throw new Error('Gemini 응답이 비어 있습니다 (안전 필터 또는 토큰 한도)');
+    if (cand?.finishReason === 'MAX_TOKENS') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
     return { text: out, model: modelLabel('gemini') };
   }
 
@@ -832,11 +836,13 @@ async function callLLM(s, text){
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 2000, system: sys, messages: [{role:'user', content: text}] }),
+    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, system: sys, messages: [{role:'user', content: text}] }),
   });
   if (!res.ok) throw new Error('Claude API 오류 ' + res.status);
   const data = await res.json();
-  return { text: data.content.filter(b => b.type === 'text').map(b => b.text).join('\n'), model: modelLabel('anthropic') };
+  let out = data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+  if (data.stop_reason === 'max_tokens') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
+  return { text: out, model: modelLabel('anthropic') };
 }
 
 /* ── 회의 소집 ── */
