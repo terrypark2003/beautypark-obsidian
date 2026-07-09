@@ -174,9 +174,31 @@
     .cat-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px;}
     #catEdit input, #catEdit textarea, #catEdit select{font-size:16px;}
   }
+
+  /* ── 비밀번호 잠금 ── */
+  #lockScreen{position:fixed; inset:0; z-index:200; background:var(--office); display:flex; align-items:center; justify-content:center; padding:24px;}
+  .lock-box{background:var(--panel); border-radius:16px; padding:32px 28px; width:100%; max-width:320px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .lock-emoji{font-size:40px;}
+  .lock-box h2{font-size:20px; margin:10px 0 4px;}
+  .lock-box p{font-size:13px; color:var(--sub); margin-bottom:16px;}
+  .lock-box input{width:100%; padding:12px; border:1px solid var(--line); border-radius:10px; font-size:22px; text-align:center; letter-spacing:8px; background:#fff; color:var(--ink); font-family:inherit;}
+  .lock-box button{width:100%; margin-top:12px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; cursor:pointer; font-family:inherit;}
+  #lockErr{color:#c0392b; font-size:12px; min-height:16px; margin-top:8px;}
+  body.locked{overflow:hidden;}
 </style>
 </head>
-<body>
+<body class="locked">
+
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-emoji">🔒</div>
+    <h2 id="lockTitle">AI 사무실</h2>
+    <p>비밀번호를 입력하세요</p>
+    <input id="lockInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button id="lockBtn">입장</button>
+    <div id="lockErr"></div>
+  </div>
+</div>
 
 <header>
   <h1 id="brandTitle">뷰티파크 AI 사무실</h1>
@@ -275,6 +297,36 @@
 </div>
 
 <script>
+/* ───────────────────────── 비밀번호 잠금 (가벼운 클라이언트 게이트) ─────────────────────────
+   정적 사이트라 서버 인증은 아니며, URL을 우연히 발견한 사람의 접근을 막는 용도.
+   비밀번호 원문은 공개 저장소에 넣지 않고 SHA-256 해시로만 저장한다.
+   해제 플래그는 'office_unlocked'(bp. 접두사 아님)라 클라우드 동기화에 실리지 않아 기기별로 잠긴다. */
+(function lockGate(){
+  const LOCK_HASH = '251851f41520f4dfde680f1053b99966765b5e9c11c8ec8673ca736225d6cdd1'; // sha256("3362")
+  const KEY = 'office_unlocked';
+  const scr = document.getElementById('lockScreen');
+  const title = document.getElementById('lockTitle');
+  const _b = new URLSearchParams(location.search).get('brand');
+  const _isSlo = _b === 'sloboda' || (!_b && location.hostname.indexOf('sloboda') === 0);
+  if (title) title.textContent = (_isSlo ? '슬로보다' : '뷰티파크') + ' AI 사무실';
+  function reveal(){ if (scr) scr.remove(); document.body.classList.remove('locked'); }
+  if (localStorage.getItem(KEY) === '1'){ reveal(); return; }
+  async function sha256(s){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+  }
+  const inp = document.getElementById('lockInput');
+  const err = document.getElementById('lockErr');
+  async function attempt(){
+    const h = await sha256((inp.value||'').trim());
+    if (h === LOCK_HASH){ localStorage.setItem(KEY,'1'); reveal(); }
+    else { err.textContent = '비밀번호가 올바르지 않습니다'; inp.value=''; inp.focus(); }
+  }
+  document.getElementById('lockBtn').addEventListener('click', attempt);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+  inp.focus();
+})();
+
 /* ───────────────────────── data ───────────────────────── */
 const ROOMS = [
   {id:'marketing', name:'마케팅룸'},
