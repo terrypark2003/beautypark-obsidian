@@ -164,6 +164,7 @@
   #catEdit .btns button{padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:13px; color:var(--ink);}
   #catEdit .btns .primary{flex:1; background:var(--accent); color:#fff; border-color:var(--accent);}
   #catEdit .btns .bench{flex:1 1 100%; background:#33302a; color:#fff; border-color:#33302a;}
+  #catEdit .btns .airecog{flex:1 1 100%; background:#2e6f4e; color:#fff; border-color:#2e6f4e;}
   #catEdit .btns .danger{color:#c0392b; border-color:#e6b8b0;}
   @media (max-width: 820px){
     #catalogOverlay{padding:0;}
@@ -275,7 +276,7 @@
     <div class="cat-body">
       <div class="cat-drop" id="catDrop">
         📋 <b>Ctrl+V</b> 로 캡처 이미지를 붙여넣거나, 여기를 <b>클릭</b>해 파일 선택 · 드래그 앤 드롭<br>
-        <span style="font-size:11px">(경쟁사 이벤트 포스터·카드뉴스·SNS 캡처를 그대로 붙여넣으면 됩니다)</span>
+        <span style="font-size:11px">붙여넣으면 <b>🤖 AI가 이미지를 읽어</b> 업체·제목·혜택·태그를 자동 정리합니다 (API 키 필요)</span>
       </div>
       <div class="cat-tools">
         <input type="search" id="catSearch" placeholder="🔍 업체·제목·태그·메모 검색" oninput="renderCatalog()">
@@ -300,6 +301,7 @@
       <label>태그 (쉼표로 구분)</label><input id="ceTags" placeholder="여름, 물광, 신규, 인스타">
       <label>출처</label><input id="ceSource" placeholder="예) 인스타 @xxx / 네이버플레이스 / 전단">
       <div class="btns">
+        <button class="airecog" onclick="aiRecognizeCurrent()">🤖 AI로 자동 인식</button>
         <button class="bench" onclick="benchmarkFromCatalog()">🎯 마케팅PD에 벤치마킹 분석 맡기기</button>
         <button class="primary" onclick="saveCatalogEntry()">저장</button>
         <button onclick="closeCatEdit()">닫기</button>
@@ -1312,7 +1314,94 @@ async function addCatalogImage(blob){
     const list = catLoad(); list.unshift(entry); catSave(list);
     if (!catalogIsOpen()) openCatalog(); else renderCatalog();
     openCatEdit(entry.id, true);   // 새 항목 → 바로 정보 입력창
+    // AI 자동 인식(이미지 내용 읽어 항목 채우기) — API 키가 있을 때
+    const head = document.getElementById('ceHead');
+    if (localStorage.getItem('bp.apikey')){
+      if (_catEditId === entry.id) head.textContent = '🤖 AI가 이미지에서 이벤트 정보를 읽는 중…';
+      try{
+        const info = await extractEventInfo(dataUrl);
+        applyExtracted(entry.id, info);
+        if (_catEditId === entry.id) head.textContent = '이벤트 정보 · 🤖 AI 인식 완료 (확인 후 저장)';
+      }catch(err){
+        console.warn('AI 인식 실패', err);
+        if (_catEditId === entry.id) head.textContent = '새 이벤트 — 정보를 채워주세요 (AI 인식 실패, 수동 입력)';
+      }
+    } else if (_catEditId === entry.id){
+      head.textContent = '새 이벤트 — [⚙ API 키]를 넣으면 AI가 자동 인식합니다';
+    }
   }catch(e){ alert('이미지 추가 실패: ' + e.message); }
+}
+// 이미지 → LLM 비전으로 이벤트 정보 구조화 추출(Gemini/Claude 공통)
+async function extractEventInfo(dataUrl){
+  const key = localStorage.getItem('bp.apikey'); if (!key) throw new Error('NO_KEY');
+  const provider = providerOf(key);
+  const b64 = dataUrl.replace(/^data:[^,]+,/, '');
+  const cats = CAT_CATEGORIES.join(', ');
+  const instruction = `이 이미지는 ${BRAND.biz} 업계 경쟁사의 이벤트/프로모션 홍보물(포스터·카드뉴스·SNS 캡처 등)입니다.\n`
+    + `이미지에서 읽히는 정보를 아래 JSON 스키마로만 답하세요. 코드블록·설명 없이 순수 JSON 하나만.\n`
+    + `{"vendor":"업체/브랜드명(보이면, 없으면 빈칸)","title":"이벤트 제목 핵심 한 줄","category":"다음 중 하나만: ${cats}","benefit":"혜택·가격·할인 내용","tags":"쉼표로 구분한 키워드 3~6개","memo":"우리가 마케팅에 참고할 벤치마킹 포인트 1~2문장"}\n`
+    + `읽을 수 없는 항목은 빈 문자열("")로 두세요.`;
+  let raw;
+  if (provider === 'gemini'){
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
+      method:'POST', headers:{'content-type':'application/json','x-goog-api-key':key},
+      body: JSON.stringify({
+        contents:[{ role:'user', parts:[ { inline_data:{ mime_type:'image/jpeg', data:b64 } }, { text:instruction } ] }],
+        generationConfig:{ maxOutputTokens:1024, thinkingConfig:{ thinkingBudget:0 }, responseMimeType:'application/json' },
+      }),
+    });
+    if (!res.ok) throw new Error('Gemini API ' + res.status);
+    const data = await res.json();
+    raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  } else {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{ 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({ model:MODELS.anthropic, max_tokens:1024, messages:[{ role:'user', content:[
+        { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
+        { type:'text', text:instruction },
+      ] }] }),
+    });
+    if (!res.ok) throw new Error('Claude API ' + res.status);
+    const data = await res.json();
+    raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  }
+  return parseJsonLoose(raw);
+}
+function parseJsonLoose(s){
+  if (!s) throw new Error('빈 응답');
+  try{ return JSON.parse(s); }catch(e){}
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m){ try{ return JSON.parse(m[0]); }catch(e){} }
+  throw new Error('AI 응답 해석 실패');
+}
+// 추출 결과를 항목·폼에 반영(빈 항목만 채워 사용자 입력을 덮어쓰지 않음)
+function applyExtracted(id, info){
+  if (!info || typeof info !== 'object') return;
+  const list = catLoad(); const e = list.find(x => x.id === id); if (!e) return;
+  if (info.category && CAT_CATEGORIES.includes(String(info.category).trim())) e.category = String(info.category).trim();
+  ['vendor','title','benefit','memo','tags'].forEach(k => {
+    const v = (info[k] == null ? '' : String(info[k])).trim();
+    if (v && !(e[k] || '').trim()) e[k] = v;
+  });
+  catSave(list);
+  if (_catEditId === id){
+    const setIfEmpty = (elId, v) => { const el = document.getElementById(elId); if (el && !el.value.trim() && v) el.value = v; };
+    setIfEmpty('ceVendor', e.vendor); setIfEmpty('ceTitle', e.title); setIfEmpty('ceBenefit', e.benefit);
+    setIfEmpty('ceMemo', e.memo); setIfEmpty('ceTags', e.tags);
+    if (e.category) document.getElementById('ceCat').value = e.category;
+  }
+  renderCatalog();
+}
+// 편집창에서 수동으로 다시 AI 인식
+async function aiRecognizeCurrent(){
+  if (!_catEditId) return;
+  const e = catLoad().find(x => x.id === _catEditId); if (!e) return;
+  if (!localStorage.getItem('bp.apikey')){ alert('AI 자동 인식은 API 키가 필요합니다.\n오른쪽 위 [⚙ API 키]에 Gemini 또는 Claude 키를 넣어주세요.'); return; }
+  const head = document.getElementById('ceHead');
+  const prev = head.textContent;
+  head.textContent = '🤖 AI가 이미지에서 이벤트 정보를 읽는 중…';
+  try{ applyExtracted(_catEditId, await extractEventInfo(e.img)); head.textContent = '이벤트 정보 · 🤖 AI 인식 완료 (확인 후 저장)'; }
+  catch(err){ head.textContent = prev; alert('AI 인식 실패: ' + err.message); }
 }
 function catalogIsOpen(){ return document.getElementById('catalogOverlay').classList.contains('open'); }
 function openCatalog(){
