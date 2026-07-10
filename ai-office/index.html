@@ -185,6 +185,18 @@
   .lock-box button{width:100%; margin-top:12px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; cursor:pointer; font-family:inherit;}
   #lockErr{color:#c0392b; font-size:12px; min-height:16px; margin-top:8px;}
   body.locked{overflow:hidden;}
+
+  /* ── 바로가기 (셀러 운영 툴) ── */
+  #shortcutsOverlay{position:fixed; inset:0; background:rgba(26,22,18,.55); z-index:55; display:none; padding:24px;}
+  #shortcutsOverlay.open{display:flex;}
+  .sc-panel{background:var(--bg); border-radius:16px; width:100%; max-width:520px; margin:auto; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.35); max-height:calc(100vh - 48px); display:flex; flex-direction:column;}
+  .sc-body{padding:16px 18px; display:grid; grid-template-columns:1fr 1fr; gap:12px; overflow:auto;}
+  .sc-card{display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--line); border-radius:12px; background:var(--panel); text-decoration:none; color:var(--ink); transition:.12s;}
+  .sc-card:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.1); border-color:var(--accent);}
+  .sc-ic{font-size:26px; flex:0 0 auto;}
+  .sc-tx b{display:block; font-size:14px;}
+  .sc-tx span{font-size:11px; color:var(--sub); word-break:break-all;}
+  @media (max-width: 820px){ .sc-body{grid-template-columns:1fr;} #shortcutsOverlay{padding:0;} .sc-panel{max-height:100vh; border-radius:0;} }
 </style>
 </head>
 <body class="locked">
@@ -205,6 +217,7 @@
   <span class="sub" id="brandSub">옵시디언 세컨브레인 · Claude</span>
   <span class="spacer"></span>
   <a class="gear" id="switchLink" style="text-decoration:none">⇄</a>
+  <button class="gear" id="shortcutsBtn" onclick="openShortcuts()" style="display:none">🔗 바로가기</button>
   <button class="gear" id="catalogBtn" onclick="openCatalog()">🗂 이벤트 카탈로그</button>
   <button class="gear" id="syncBtn" onclick="openSync()">☁ 동기화</button>
   <button class="gear" id="keyBtn" onclick="setKey()">⚙ API 키</button>
@@ -293,6 +306,22 @@
         <button class="danger" onclick="deleteCatalogEntry()">삭제</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 바로가기 (셀러 운영 툴) — 슬로보다 전용 -->
+<div id="shortcutsOverlay">
+  <div class="sc-panel">
+    <div class="cat-head">
+      <span style="font-size:22px">🔗</span>
+      <div>
+        <h2>바로가기</h2>
+        <div class="sub">자주 쓰는 셀러 운영 툴로 이동 (새 탭)</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="cat-x" onclick="closeShortcuts()">✕</button>
+    </div>
+    <div class="sc-body" id="scBody"></div>
   </div>
 </div>
 
@@ -649,6 +678,7 @@ const SLOBODA_STAFF = {
 if (BRAND.key === 'sloboda'){
   ROOMS.forEach(r => { if (SLOBODA_ROOMS[r.id]) r.name = SLOBODA_ROOMS[r.id]; });
   STAFF.forEach(s => { const o = SLOBODA_STAFF[s.id]; if (o) Object.assign(s, o); });
+  const _scBtn = document.getElementById('shortcutsBtn'); if (_scBtn) _scBtn.style.display = '';
 }
 document.title = `${BRAND.name} AI 사무실`;
 document.getElementById('brandTitle').textContent = `${BRAND.name} AI 사무실`;
@@ -1406,7 +1436,25 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (document.getElementById('catEdit').classList.contains('open')) closeCatEdit();
   else if (catalogIsOpen()) closeCatalog();
+  else if (document.getElementById('shortcutsOverlay').classList.contains('open')) closeShortcuts();
 });
+
+/* ───────────────────────── 바로가기 (셀러 운영 툴) — 슬로보다 전용 ───────────────────────── */
+const SLOBODA_SHORTCUTS = [
+  { ic:'🚚', name:'CJ대한통운 eFlex', desc:'물류·배송 관리', url:'https://eflexs-x.cjlogistics.com/index.do' },
+  { ic:'🤝', name:'네이버 브랜드커넥트', desc:'인플루언서·파트너 협업', url:'https://brandconnect.naver.com/space/list/partner' },
+  { ic:'🛒', name:'쿠팡 윙', desc:'쿠팡 셀러 어드민', url:'https://wing.coupang.com/' },
+  { ic:'📱', name:'SNS 관리 도구', desc:'sns-pi-sand.vercel.app', url:'https://sns-pi-sand.vercel.app/' },
+];
+function openShortcuts(){
+  document.getElementById('scBody').innerHTML = SLOBODA_SHORTCUTS.map(s => `
+    <a class="sc-card" href="${s.url}" target="_blank" rel="noopener noreferrer">
+      <span class="sc-ic">${s.ic}</span>
+      <span class="sc-tx"><b>${esc(s.name)}</b><span>${esc(s.desc)}</span></span>
+    </a>`).join('');
+  document.getElementById('shortcutsOverlay').classList.add('open');
+}
+function closeShortcuts(){ document.getElementById('shortcutsOverlay').classList.remove('open'); }
 
 buildStaffGrid();  // 모바일 직원 카드
 // 클라우드가 켜져 있으면 시작 시 원격 기억을 끌어와 병합
