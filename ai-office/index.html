@@ -76,7 +76,18 @@
   .task .meta .m-dot.done{background:var(--green);}
   .task .instruction{background:var(--accent-soft); color:#b4432e; font-size:13px; line-height:1.6; padding:10px 14px; border-radius:8px; margin-bottom:10px; white-space:pre-wrap;}
   .task .instruction.teach{background:#e9f0e6; color:#3c6e4c;}
-  .task .result{font-size:13px; line-height:1.75; white-space:pre-wrap; color:var(--ink); border-top:1px dashed var(--line); padding-top:10px;}
+  .task .result{font-size:13px; line-height:1.75; color:var(--ink); border-top:1px dashed var(--line); padding-top:10px;}
+  /* 마크다운 렌더링 (직원 답변·회의록) */
+  .result .md-tw{overflow-x:auto; margin:6px 0;}
+  .result table{border-collapse:collapse; font-size:12px; min-width:60%;}
+  .result th,.result td{border:1px solid var(--line); padding:4px 9px; text-align:left; vertical-align:top;}
+  .result th{background:#f6f2e8; font-weight:600;}
+  .result .md-h{font-weight:700; margin:10px 0 4px;}
+  .result .md-h1{font-size:15px;} .result .md-h2{font-size:14px;} .result .md-h3{font-size:13px;}
+  .result ul,.result ol{margin:4px 0 6px 20px;}
+  .result li{margin:2px 0;}
+  .result code{background:#f3efe6; border-radius:4px; padding:1px 5px; font-size:12px;}
+  .result .md-sp{height:7px;}
   .task .working-note{font-size:12px; color:var(--sub);}
   .task .copybtn{margin-top:8px; font-size:11px; border:1px solid var(--line); background:#faf8f2; border-radius:6px; padding:4px 10px; cursor:pointer; color:var(--sub);}
   .jobdesc{font-size:13px; line-height:1.85; white-space:pre-wrap;}
@@ -1000,6 +1011,39 @@ function fmt(ts){
 }
 function esc(x){ const d = document.createElement('div'); d.textContent = x; return d.innerHTML; }
 
+/* 가벼운 마크다운 렌더러 — 직원 답변의 표·제목·리스트를 제대로 보여준다.
+   XSS 방지: 먼저 esc()로 전부 이스케이프한 뒤 마크다운 구조만 태그로 변환. */
+function mdRender(md){
+  if (!md) return '';
+  const inline = s => s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+  const out = []; let list = null, table = false;
+  const closeList = () => { if (list){ out.push(list === 'ul' ? '</ul>' : '</ol>'); list = null; } };
+  const closeTable = () => { if (table){ out.push('</tbody></table></div>'); table = false; } };
+  for (const raw of esc(md).split('\n')){
+    const line = raw.trimEnd(); let m;
+    const t = line.trim();
+    if (/^\|.+\|$/.test(t)){                       // 표 행
+      const cells = t.slice(1, -1).split('|').map(c => c.trim());
+      if (cells.every(c => /^:?-{2,}:?$/.test(c))) continue;   // 구분선 행
+      if (!table){ closeList(); out.push('<div class="md-tw"><table><tbody>'); table = true;
+        out.push('<tr>' + cells.map(c => '<th>' + inline(c) + '</th>').join('') + '</tr>'); continue; }
+      out.push('<tr>' + cells.map(c => '<td>' + inline(c) + '</td>').join('') + '</tr>'); continue;
+    }
+    closeTable();
+    if (m = line.match(/^(#{1,3})\s+(.*)/)){ closeList(); out.push(`<div class="md-h md-h${m[1].length}">${inline(m[2])}</div>`); continue; }
+    if (m = line.match(/^\s*[-•]\s+(.*)/)){ if (list !== 'ul'){ closeList(); out.push('<ul>'); list = 'ul'; } out.push('<li>' + inline(m[1]) + '</li>'); continue; }
+    if (m = line.match(/^\s*\d+[.)]\s+(.*)/)){ if (list !== 'ol'){ closeList(); out.push('<ol>'); list = 'ol'; } out.push('<li>' + inline(m[1]) + '</li>'); continue; }
+    closeList();
+    if (!t){ out.push('<div class="md-sp"></div>'); continue; }
+    out.push('<div>' + inline(line) + '</div>');
+  }
+  closeList(); closeTable();
+  return out.join('');
+}
+
 function renderTab(){
   if (!selected){ return; }
   if (activeTab === 'work') return renderWork();
@@ -1032,7 +1076,7 @@ function renderWork(){
     const dotCls = t.status === 'done' ? 'm-dot done' : 'm-dot';
     const statusLine = t.status === 'working'
       ? `<div class="working-note">⏳ 작업 중…</div>`
-      : (t.result ? `<div class="result">${esc(t.result)}</div>` : '');
+      : (t.result ? `<div class="result">${mdRender(t.result)}</div>` : '');
     const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">${t.copyLabel || '📋 Claude Code용 프롬프트 복사'}</button>` : '';
     const label = t.mode === 'teach' ? '🎓 가르치기' : (t.mode === 'meeting' ? '🗣 회의' : '🎯 업무 지시');
     return `<div class="task">
@@ -1058,13 +1102,14 @@ function buildPrompt(s, text){
   return `${s.name}(${s.id}) 서브에이전트로 다음 업무를 처리해줘. 시작 전에 CLAUDE.md와 담당 MOC를 꼭 읽어.\n\n업무 지시:\n${text}${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
 }
 
-async function callLLM(s, text){
+async function callLLM(s, text, history){
   const key = localStorage.getItem('bp.apikey');
   if (!key) return null;
   const provider = providerOf(key);
   await wikiReady;
   const wiki = wikiContext(s);
   const mem = store.load(s.id, 'memory').map(m => `- ${m.text}`).join('\n');
+  const hist = history || [];   // [{role:'user'|'assistant', text}] — 최근 대화 맥락
   const sys = `너는 ${BRAND.name}(${BRAND.biz})의 AI 직원 '${s.name}'이다. 현재 ${modelLabel(provider)} 모델로 구동되고 있다 — 어떤 모델이냐고 물으면 이 사실대로 답한다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: ${BRAND.rules}. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}${wiki ? `\n\n[사내 위키 발췌 — 답변의 근거로 사용하라. 문서가 seed 상태(빈 뼈대)면 그 사실을 밝히고 일반 원칙으로 답하되, 위키에 채워 넣을 내용을 함께 제안하라]\n${wiki}` : ''}`;
 
   if (provider === 'gemini'){
@@ -1073,7 +1118,10 @@ async function callLLM(s, text){
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: sys }] },
-        contents: [{ role: 'user', parts: [{ text }] }],
+        contents: [
+          ...hist.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] })),
+          { role: 'user', parts: [{ text }] },
+        ],
         // maxOutputTokens를 넉넉히 주고, 2.5-flash의 '생각(thinking)' 토큰이
         // 답변 토큰을 잡아먹어 문장이 중간에 잘리지 않도록 thinkingBudget=0으로 끈다.
         generationConfig: { maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
@@ -1096,7 +1144,10 @@ async function callLLM(s, text){
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, system: sys, messages: [{role:'user', content: text}] }),
+    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, system: sys, messages: [
+      ...hist.map(h => ({ role: h.role, content: h.text })),
+      { role: 'user', content: text },
+    ] }),
   });
   if (!res.ok) throw new Error('Claude API 오류 ' + res.status);
   const data = await res.json();
@@ -1234,7 +1285,14 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
   const started = Date.now();
   let result, usedModel = null;
   try{
-    const r = await callLLM(s, text);
+    // 연속 대화: 같은 직원의 최근 업무 지시·답변(최대 3쌍)을 맥락으로 전달
+    // → "이어서 답해줘", "그거 더 자세히" 같은 후속 지시가 실제로 통한다.
+    const hist = store.load(s.id, 'tasks')
+      .filter(x => x.mode === 'task' && x.status === 'done' && x.result
+        && !x.result.startsWith('(시뮬레이션') && !x.result.startsWith('⚠️'))
+      .slice(-3)
+      .flatMap(x => [{ role: 'user', text: x.text }, { role: 'assistant', text: x.result.slice(0, 3000) }]);
+    const r = await callLLM(s, text, hist);
     if (r === null){
       result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic(sk-ant-…) 또는 Google Gemini API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
       await new Promise(r2 => setTimeout(r2, 4000 + Math.random()*3000));
