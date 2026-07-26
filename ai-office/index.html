@@ -88,6 +88,8 @@
   .result li{margin:2px 0;}
   .result code{background:#f3efe6; border-radius:4px; padding:1px 5px; font-size:12px;}
   .result .md-sp{height:7px;}
+  .result .cursor{color:var(--accent); animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
   .task .working-note{font-size:12px; color:var(--sub);}
   .task .copybtn{margin-top:8px; font-size:11px; border:1px solid var(--line); background:#faf8f2; border-radius:6px; padding:4px 10px; cursor:pointer; color:var(--sub);}
   .jobdesc{font-size:13px; line-height:1.85; white-space:pre-wrap;}
@@ -1075,7 +1077,7 @@ function renderWork(){
   tabBody.innerHTML = tasks.map(t => {
     const dotCls = t.status === 'done' ? 'm-dot done' : 'm-dot';
     const statusLine = t.status === 'working'
-      ? `<div class="working-note">⏳ 작업 중…</div>`
+      ? `<div class="working-note" id="live-${t.ts}">⏳ 작업 중…</div>`
       : (t.result ? `<div class="result">${mdRender(t.result)}</div>` : '');
     const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">${t.copyLabel || '📋 Claude Code용 프롬프트 복사'}</button>` : '';
     const label = t.mode === 'teach' ? '🎓 가르치기' : (t.mode === 'meeting' ? '🗣 회의' : '🎯 업무 지시');
@@ -1102,7 +1104,29 @@ function buildPrompt(s, text){
   return `${s.name}(${s.id}) 서브에이전트로 다음 업무를 처리해줘. 시작 전에 CLAUDE.md와 담당 MOC를 꼭 읽어.\n\n업무 지시:\n${text}${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
 }
 
-async function callLLM(s, text, history){
+// SSE(Server-Sent Events) 응답을 줄 단위로 파싱해 data JSON마다 onData 호출
+async function readSSE(res, onData){
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  for (;;){
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const ln of lines){
+      const m = ln.match(/^data:\s*(.*)/);
+      if (!m) continue;
+      const payload = m[1].trim();
+      if (!payload || payload === '[DONE]') continue;
+      try{ onData(JSON.parse(payload)); }catch(e){ /* partial line — skip */ }
+    }
+  }
+}
+
+// onChunk(누적텍스트): 스트리밍 중 화면 갱신용 콜백(선택). 없으면 조용히 모아서 반환.
+async function callLLM(s, text, history, onChunk){
   const key = localStorage.getItem('bp.apikey');
   if (!key) return null;
   const provider = providerOf(key);
@@ -1113,7 +1137,8 @@ async function callLLM(s, text, history){
   const sys = `너는 ${BRAND.name}(${BRAND.biz})의 AI 직원 '${s.name}'이다. 현재 ${modelLabel(provider)} 모델로 구동되고 있다 — 어떤 모델이냐고 물으면 이 사실대로 답한다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: ${BRAND.rules}. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}${wiki ? `\n\n[사내 위키 발췌 — 답변의 근거로 사용하라. 문서가 seed 상태(빈 뼈대)면 그 사실을 밝히고 일반 원칙으로 답하되, 위키에 채워 넣을 내용을 함께 제안하라]\n${wiki}` : ''}`;
 
   if (provider === 'gemini'){
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
+    // 스트리밍 엔드포인트(alt=sse) — 답변이 생성되는 대로 흘러나온다
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:streamGenerateContent?alt=sse`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
@@ -1128,11 +1153,16 @@ async function callLLM(s, text, history){
       }),
     });
     if (!res.ok) throw new Error('Gemini API 오류 ' + res.status);
-    const data = await res.json();
-    const cand = data.candidates?.[0];
-    let out = (cand?.content?.parts || []).map(p => p.text || '').join('\n').trim();
+    let out = '', finish = null;
+    await readSSE(res, data => {
+      const cand = data.candidates?.[0];
+      const t = (cand?.content?.parts || []).map(p => p.text || '').join('');
+      if (t){ out += t; if (onChunk) onChunk(out); }
+      if (cand?.finishReason) finish = cand.finishReason;
+    });
+    out = out.trim();
     if (!out) throw new Error('Gemini 응답이 비어 있습니다 (안전 필터 또는 토큰 한도)');
-    if (cand?.finishReason === 'MAX_TOKENS') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
+    if (finish === 'MAX_TOKENS') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
     return { text: out, model: modelLabel('gemini') };
   }
 
@@ -1144,15 +1174,18 @@ async function callLLM(s, text, history){
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, system: sys, messages: [
+    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, stream: true, system: sys, messages: [
       ...hist.map(h => ({ role: h.role, content: h.text })),
       { role: 'user', content: text },
     ] }),
   });
   if (!res.ok) throw new Error('Claude API 오류 ' + res.status);
-  const data = await res.json();
-  let out = data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-  if (data.stop_reason === 'max_tokens') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
+  let out = '', stop = null;
+  await readSSE(res, data => {
+    if (data.type === 'content_block_delta' && data.delta && data.delta.text){ out += data.delta.text; if (onChunk) onChunk(out); }
+    if (data.type === 'message_delta' && data.delta && data.delta.stop_reason) stop = data.delta.stop_reason;
+  });
+  if (stop === 'max_tokens') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
   return { text: out, model: modelLabel('anthropic') };
 }
 
@@ -1292,7 +1325,20 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
         && !x.result.startsWith('(시뮬레이션') && !x.result.startsWith('⚠️'))
       .slice(-3)
       .flatMap(x => [{ role: 'user', text: x.text }, { role: 'assistant', text: x.result.slice(0, 3000) }]);
-    const r = await callLLM(s, text, hist);
+    // 스트리밍: 생성되는 대로 '작업 중' 자리에 실시간 표시 (80ms 스로틀, 하단 근처일 때만 자동 스크롤)
+    let lastPaint = 0;
+    const onChunk = partial => {
+      const now = Date.now();
+      if (now - lastPaint < 80) return;
+      lastPaint = now;
+      const el = document.getElementById('live-' + t.ts);
+      if (!el) return;
+      const nearBottom = tabBody.scrollHeight - tabBody.scrollTop - tabBody.clientHeight < 90;
+      el.className = 'result';
+      el.innerHTML = mdRender(partial) + '<span class="cursor">▌</span>';
+      if (nearBottom) tabBody.scrollTop = tabBody.scrollHeight;
+    };
+    const r = await callLLM(s, text, hist, onChunk);
     if (r === null){
       result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic(sk-ant-…) 또는 Google Gemini API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
       await new Promise(r2 => setTimeout(r2, 4000 + Math.random()*3000));
