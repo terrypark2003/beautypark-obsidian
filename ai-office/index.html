@@ -25,19 +25,53 @@
   main{flex:1; display:flex; gap:16px; padding:0 16px 16px; min-height:0;}
 
   /* ── office (left) ── */
-  #office{flex:1.1; background:var(--office); border-radius:14px; padding:14px; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:12px; position:relative; min-width:0;}
-  .room{background:var(--room); border:2px solid transparent; border-radius:8px; position:relative; overflow:visible; cursor:default;}
+  #office{flex:1.1; border-radius:14px; padding:14px; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:14px; position:relative; min-width:0;
+    /* 나무 복도 느낌의 배경 (세로 판자) */
+    background:repeating-linear-gradient(90deg,#33291f 0 30px,#382e23 30px 31px,#362c21 31px 60px,#2f261c 60px 61px);}
+  /* 창문 줄 (하늘·구름·해) */
+  .sky-row{grid-column:1/-1; display:flex; justify-content:space-between; gap:14px; height:42px;}
+  .window{flex:1; max-width:32%; position:relative; overflow:hidden; border:3px solid #e8e1d0; border-radius:6px; box-shadow:0 3px 0 rgba(0,0,0,.3);
+    background:linear-gradient(180deg,#8ecbe6 0%,#b8e0f0 70%,#d3ecf6 100%);}
+  .window::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg,transparent 44%,#e8e1d0 44%,#e8e1d0 56%,transparent 56%),
+               linear-gradient(90deg,transparent 48%,#e8e1d0 48%,#e8e1d0 52%,transparent 52%);}
+  .window .cloud{position:absolute; top:7px; left:-30px; width:24px; height:9px; background:#fff; border-radius:8px; opacity:.95; animation:drift 26s linear infinite;}
+  .window .cloud.c2{top:20px; width:16px; height:7px; animation-duration:38s; animation-delay:-14s; opacity:.75;}
+  .window .sun{position:absolute; right:9px; top:6px; width:11px; height:11px; border-radius:50%; background:#ffd76e; box-shadow:0 0 9px 2px rgba(255,215,110,.7);}
+  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(420px)}}
+  .room{background:var(--room); border:2px solid transparent; border-radius:8px; position:relative; overflow:visible; cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.03), 0 3px 0 rgba(0,0,0,.22);}
   .room.highlight{border-color:#e59b83;}
   .room .label{position:absolute; top:-9px; left:10px; background:var(--chip); color:#f0ecdd; font-size:11px; padding:3px 9px; border-radius:4px; z-index:5;}
-  .room .plant{position:absolute; top:6px; right:8px; font-size:12px; opacity:.85;}
-  .room .floor{position:absolute; inset:22px 12px 10px; background:var(--floor); border-radius:4px;}
-  .hint{position:absolute; bottom:8px; left:12px; font-size:11px; color:#8a8378; background:rgba(0,0,0,.25); padding:3px 8px; border-radius:4px;}
+  .room .plant{position:absolute; bottom:6px; right:8px; font-size:13px; opacity:.9; z-index:3;}
+  .room .floor{position:absolute; inset:22px 12px 10px; background:var(--rf,var(--floor)); border-radius:4px;
+    background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px); background-size:100% 14px;}
+  .hint{position:absolute; bottom:8px; left:12px; font-size:11px; color:#b8ac96; background:rgba(0,0,0,.35); padding:3px 8px; border-radius:4px; z-index:5;}
 
-  .desk{position:absolute; width:78px; height:22px; background:#7d5f42; border-radius:2px; box-shadow:0 4px 0 #5e4730;}
-  .desk::after{content:""; position:absolute; right:8px; top:-2px; width:10px; height:6px; background:#efe9dc; border:2px solid #23201c; border-bottom-width:1px;}
-  .coffee{position:absolute; width:22px; height:30px; background:#23201c; border-radius:2px;}
+  /* 가구 */
+  .desk{position:absolute; width:74px; height:20px; background:linear-gradient(180deg,#8a6a4a,#7d5f42); border-radius:3px; box-shadow:0 4px 0 #5e4730; z-index:2;}
+  .desk::before{content:""; position:absolute; left:50%; transform:translateX(-50%); top:-17px; width:26px; height:15px;
+    background:linear-gradient(135deg,#233240 0%,#182028 60%); border:2px solid #46403a; border-radius:3px; box-shadow:inset 0 0 5px rgba(96,170,220,.5);}
+  .desk::after{content:""; position:absolute; left:50%; transform:translateX(-50%); top:5px; width:22px; height:5px; background:#e8e1d0; border-radius:1px; box-shadow:0 1px 0 #4c4038;}
+  .coffee{position:absolute; width:22px; height:30px; background:#23201c; border-radius:2px; z-index:2;}
   .coffee::after{content:"☕"; position:absolute; font-size:10px; left:5px; top:9px;}
   .coffee-label{position:absolute; font-size:10px; color:#9b937f;}
+  .shelf{position:absolute; top:-3px; right:8px; width:56px; height:26px; background:#4c3a28; border:2px solid #3a2c1e; border-radius:3px; z-index:1; overflow:hidden;}
+  .shelf::before{content:""; position:absolute; inset:3px;
+    background:repeating-linear-gradient(90deg,#c05b4d 0 5px,#3f6f63 5px 10px,#d8a24a 10px 14px,#5b6d9e 14px 19px,#8a5a86 19px 23px,#c9c39a 23px 28px);}
+  .shelf::after{content:""; position:absolute; left:0; right:0; top:50%; height:2px; background:#3a2c1e;}
+  .sofa{position:absolute; right:10%; top:38%; width:44%; height:16px; background:#b98a92; border-radius:8px 8px 3px 3px; box-shadow:0 5px 0 #8f676e; z-index:2;}
+  .sofa::before{content:""; position:absolute; left:6%; right:6%; top:-8px; height:9px; background:#c599a1; border-radius:6px 6px 0 0;}
+  .sofa::after{content:""; position:absolute; left:48%; top:-6px; width:2px; height:6px; background:#8f676e;}
+  .fridge{position:absolute; right:6%; top:16%; width:18px; height:34px; background:#d9d2c2; border:2px solid #57503f; border-radius:3px; z-index:1;}
+  .fridge::before{content:""; position:absolute; left:2px; right:2px; top:38%; height:2px; background:#57503f;}
+  .poster{position:absolute; top:14px; left:16px; background:#efe9dc; color:#4a423a; font-size:8px; line-height:1.2; padding:3px 6px 4px; border-radius:2px; border:2px solid #4c4038; z-index:1; text-align:center; max-width:76px; white-space:nowrap;}
+  .poster::before{content:""; display:block; width:100%; height:3px; margin-bottom:2px;
+    background:repeating-linear-gradient(90deg,var(--accent) 0 6px,#8fb3a0 6px 12px,#d8a24a 12px 18px);}
+  .poster.med{font-size:12px; color:#c0392b; font-weight:700;}
+  .mtable{position:absolute; left:16%; right:16%; top:44%; height:26px; background:linear-gradient(180deg,#7a5c3f,#6d5138); border-radius:12px; box-shadow:0 5px 0 #54402c; z-index:1;}
+  .mtable::before,.mtable::after{content:""; position:absolute; top:-7px; width:12px; height:6px; background:#4c4038; border-radius:2px;}
+  .mtable::before{left:14%;} .mtable::after{right:14%;}
+  #room-legal2{grid-column:1/-1;}  /* 법무 2차실(3인)은 마지막 줄 전체 폭 */
 
   /* pixel character */
   .char{position:absolute; width:30px; cursor:pointer; transition:left 1.6s linear, top 1.6s linear; z-index:4; image-rendering:pixelated;}
@@ -45,7 +79,7 @@
   .char .bubble{position:absolute; bottom:100%; left:50%; transform:translateX(-50%); margin-bottom:24px; background:#efe6df; color:#4a423a; font-size:10px; white-space:nowrap; max-width:190px; overflow:hidden; text-overflow:ellipsis; padding:3px 9px; border-radius:8px; display:none; z-index:6;}
   .char.talking .bubble{display:block;}
   .char .px{margin:0 auto;}
-  .char .hair{width:18px; height:7px; background:#2a211a; border-radius:2px 2px 0 0;}
+  .char .hair{width:18px; height:7px; background:var(--hair,#2a211a); border-radius:2px 2px 0 0;}
   .char .face{width:18px; height:8px; background:#f2c9a0; position:relative;}
   .char .face::before,.char .face::after{content:""; position:absolute; top:2px; width:2px; height:3px; background:#2a211a;}
   .char .face::before{left:3px;} .char .face::after{right:3px;}
@@ -88,6 +122,8 @@
   .result li{margin:2px 0;}
   .result code{background:#f3efe6; border-radius:4px; padding:1px 5px; font-size:12px;}
   .result .md-sp{height:7px;}
+  .result .cursor{color:var(--accent); animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
   .task .working-note{font-size:12px; color:var(--sub);}
   .task .copybtn{margin-top:8px; font-size:11px; border:1px solid var(--line); background:#faf8f2; border-radius:6px; padding:4px 10px; cursor:pointer; color:var(--sub);}
   .jobdesc{font-size:13px; line-height:1.85; white-space:pre-wrap;}
@@ -104,6 +140,9 @@
   textarea{flex:1; resize:none; height:64px; border:1px solid var(--line); border-radius:10px; padding:10px 14px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);}
   textarea:focus{outline:none; border-color:#d8b8a8;}
   #sendBtn{width:84px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; cursor:pointer; font-family:inherit;}
+  #micBtn{width:44px; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:16px; cursor:pointer; font-family:inherit;}
+  #micBtn.rec{background:var(--accent); border-color:var(--accent); animation:blink 1.1s infinite;}
+  #styleSel{border:1px solid var(--line); border-radius:8px; background:#fff; font-size:12px; padding:4px 8px; color:var(--sub); font-family:inherit;}
   #sendBtn:disabled{background:#dcd4c6; cursor:not-allowed;}
 
   /* ── 모바일용 직원 카드 그리드 (좁은 화면에서만 노출) ── */
@@ -252,7 +291,7 @@
 
 <header>
   <h1 id="brandTitle">뷰티파크 AI 사무실</h1>
-  <span class="sub" id="brandSub">옵시디언 세컨브레인 · Claude</span>
+  <span class="sub" id="brandSub">옵시디언 세컨브레인 · <b style="color:var(--accent)">v2.0</b></span>
   <span class="spacer"></span>
   <a class="gear" id="switchLink" style="text-decoration:none">⇄</a>
   <button class="gear" id="shortcutsBtn" onclick="openShortcuts()" style="display:none">🔗 바로가기</button>
@@ -290,9 +329,16 @@
         <label><input type="radio" name="mode" value="task" checked> 🎯 업무 지시</label>
         <label><input type="radio" name="mode" value="teach"> 🎓 가르치기 (피드백)</label>
         <label><input type="radio" name="mode" value="meeting"> 🗣 회의 소집</label>
+        <span style="flex:1"></span>
+        <select id="styleSel" title="답변 스타일">
+          <option value="간결">답변: 간결</option>
+          <option value="보통" selected>답변: 보통</option>
+          <option value="상세">답변: 상세</option>
+        </select>
       </div>
       <div class="c-row">
-        <textarea id="input" placeholder="지시 내용을 입력하세요…  예) 네이버 AI탭 노출 전략 정리해줘"></textarea>
+        <textarea id="input" placeholder="지시 내용을 입력하거나 🎤 버튼을 눌러 말하세요"></textarea>
+        <button id="micBtn" title="음성 입력 (Chrome 권장)" onclick="toggleMic()">🎤</button>
         <button id="sendBtn" disabled>전달</button>
       </div>
     </div>
@@ -445,17 +491,34 @@
 
 /* ───────────────────────── data ───────────────────────── */
 const ROOMS = [
+  {id:'meeting',   name:'회의실'},
+  {id:'lounge',    name:'휴게실'},
   {id:'marketing', name:'마케팅룸'},
-  {id:'consult',   name:'상담실'},
-  {id:'ops',       name:'운영실'},
-  {id:'studio',    name:'콘텐츠 스튜디오'},
   {id:'medical',   name:'메디컬 랩'},
+  {id:'consult',   name:'상담실'},
   {id:'strategy',  name:'경영전략실'},
+  {id:'studio',    name:'콘텐츠 스튜디오'},
+  {id:'secretary', name:'비서실'},
+  {id:'ops',       name:'운영실'},
   {id:'legal',     name:'법무실 (1차)'},
   {id:'legal2',    name:'법무 2차실'},
-  {id:'secretary', name:'비서실'},
-  {id:'lounge',    name:'휴게실'},
 ];
+// 방별 바닥색·가구 (마하닥 v5 스타일 벤치마킹 — 방마다 개성)
+const ROOM_STYLE = {
+  meeting:  { rf:'#3c342b', decor:'<div class="mtable"></div>' },
+  lounge:   { rf:'#4b4034', decor:'<div class="sofa"></div><div class="fridge"></div>' },
+  marketing:{ rf:'#463a30', decor:'<div class="poster">캠페인 전략</div><div class="shelf"></div>' },
+  medical:  { rf:'#3d5049', decor:'<div class="poster med">✚</div><div class="shelf"></div>' },
+  consult:  { rf:'#493e33', decor:'<div class="poster">FAQ</div>' },
+  strategy: { rf:'#3d434d', decor:'<div class="poster">KPI · 조직도</div>' },
+  studio:   { rf:'#443a4b', decor:'<div class="poster">콘텐츠 보드</div>' },
+  secretary:{ rf:'#453d2f', decor:'<div class="shelf"></div>' },
+  ops:      { rf:'#424032', decor:'<div class="poster">운영 SOP</div>' },
+  legal:    { rf:'#453f38', decor:'<div class="poster">법령집</div><div class="shelf"></div>' },
+  legal2:   { rf:'#3e3a45', decor:'<div class="poster">판례 노트</div>' },
+};
+// 직원별 머리색 (개성 부여)
+const HAIR_PALETTE = ['#2c2320','#4a3624','#1f1d2e','#5b3d2a','#3a2d3f','#26302b','#503028','#2a2a3a','#443322','#332126','#25332e'];
 
 const STAFF = [
   {id:'marketing-pd', name:'마케팅PD', emoji:'🎯', room:'marketing', shirt:'#e07a5f',
@@ -900,14 +963,23 @@ function setSyncBadge(t){ const b = document.getElementById('syncBtn'); if (b) b
 
 /* ───────────────────────── office render ───────────────────────── */
 const officeEl = document.getElementById('office');
+// 창문 줄 (하늘·구름·해)
+officeEl.insertAdjacentHTML('afterbegin',
+  `<div class="sky-row">
+     <div class="window"><span class="cloud"></span><span class="cloud c2"></span></div>
+     <div class="window"><span class="cloud" style="animation-delay:-9s"></span><span class="sun"></span></div>
+     <div class="window"><span class="cloud" style="animation-delay:-20s"></span><span class="cloud c2" style="animation-delay:-4s"></span></div>
+   </div>`);
 ROOMS.forEach(r => {
+  const st = ROOM_STYLE[r.id] || {};
   const el = document.createElement('div');
   el.className = 'room'; el.id = 'room-' + r.id;
-  el.innerHTML = `<span class="label">${r.name}</span><span class="plant">🪴</span><div class="floor"></div>`;
+  if (st.rf) el.style.setProperty('--rf', st.rf);
+  el.innerHTML = `<span class="label">${r.name}</span>${st.decor || ''}<span class="plant">🪴</span><div class="floor"></div>`;
   officeEl.insertBefore(el, officeEl.querySelector('.hint'));
 });
 const lounge = document.querySelector('#room-lounge .floor');
-lounge.insertAdjacentHTML('beforeend', `<div class="coffee" style="left:18%;top:18%"></div><div class="coffee-label" style="left:8%;top:62%">☕ 커피머신</div>`);
+lounge.insertAdjacentHTML('beforeend', `<div class="coffee" style="left:12%;top:14%"></div><div class="coffee-label" style="left:6%;top:60%">☕ 커피머신</div>`);
 
 // 한 방에 여러 직원이 있으면 가로로 고르게 분산 (겹침 방지)
 const _roomCount = {}; STAFF.forEach(s => { _roomCount[s.room] = (_roomCount[s.room]||0)+1; });
@@ -920,6 +992,7 @@ STAFF.forEach(s => {
   const c = document.createElement('div');
   c.className = 'char'; c.id = 'char-' + s.id;
   c.style.setProperty('--shirt', s.shirt);
+  c.style.setProperty('--hair', HAIR_PALETTE[STAFF.indexOf(s) % HAIR_PALETTE.length]);
   c.style.left = cx + '%'; c.style.top = '18%';
   c.innerHTML = `<span class="bubble"></span><span class="nametag">${s.name}</span><span class="dot"></span>
     <div class="px hair"></div><div class="px face"></div><div class="px torso"></div><div class="px legs"></div><div class="px shadow"></div>`;
@@ -1075,7 +1148,7 @@ function renderWork(){
   tabBody.innerHTML = tasks.map(t => {
     const dotCls = t.status === 'done' ? 'm-dot done' : 'm-dot';
     const statusLine = t.status === 'working'
-      ? `<div class="working-note">⏳ 작업 중…</div>`
+      ? `<div class="working-note" id="live-${t.ts}">⏳ 작업 중…</div>`
       : (t.result ? `<div class="result">${mdRender(t.result)}</div>` : '');
     const copy = t.prompt ? `<button class="copybtn" data-copy="${encodeURIComponent(t.prompt)}">${t.copyLabel || '📋 Claude Code용 프롬프트 복사'}</button>` : '';
     const label = t.mode === 'teach' ? '🎓 가르치기' : (t.mode === 'meeting' ? '🗣 회의' : '🎯 업무 지시');
@@ -1102,7 +1175,29 @@ function buildPrompt(s, text){
   return `${s.name}(${s.id}) 서브에이전트로 다음 업무를 처리해줘. 시작 전에 CLAUDE.md와 담당 MOC를 꼭 읽어.\n\n업무 지시:\n${text}${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}`;
 }
 
-async function callLLM(s, text, history){
+// SSE(Server-Sent Events) 응답을 줄 단위로 파싱해 data JSON마다 onData 호출
+async function readSSE(res, onData){
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  for (;;){
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const ln of lines){
+      const m = ln.match(/^data:\s*(.*)/);
+      if (!m) continue;
+      const payload = m[1].trim();
+      if (!payload || payload === '[DONE]') continue;
+      try{ onData(JSON.parse(payload)); }catch(e){ /* partial line — skip */ }
+    }
+  }
+}
+
+// onChunk(누적텍스트): 스트리밍 중 화면 갱신용 콜백(선택). 없으면 조용히 모아서 반환.
+async function callLLM(s, text, history, onChunk){
   const key = localStorage.getItem('bp.apikey');
   if (!key) return null;
   const provider = providerOf(key);
@@ -1113,7 +1208,8 @@ async function callLLM(s, text, history){
   const sys = `너는 ${BRAND.name}(${BRAND.biz})의 AI 직원 '${s.name}'이다. 현재 ${modelLabel(provider)} 모델로 구동되고 있다 — 어떤 모델이냐고 물으면 이 사실대로 답한다.\n${s.desc}\n\n직무기술서:\n${s.job}\n\n규칙: ${BRAND.rules}. 한국어로, 결론 먼저 간결하게.${mem ? `\n\n대표가 가르쳐준 교훈 (반드시 반영):\n${mem}` : ''}${wiki ? `\n\n[사내 위키 발췌 — 답변의 근거로 사용하라. 문서가 seed 상태(빈 뼈대)면 그 사실을 밝히고 일반 원칙으로 답하되, 위키에 채워 넣을 내용을 함께 제안하라]\n${wiki}` : ''}`;
 
   if (provider === 'gemini'){
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
+    // 스트리밍 엔드포인트(alt=sse) — 답변이 생성되는 대로 흘러나온다
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:streamGenerateContent?alt=sse`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
@@ -1128,11 +1224,16 @@ async function callLLM(s, text, history){
       }),
     });
     if (!res.ok) throw new Error('Gemini API 오류 ' + res.status);
-    const data = await res.json();
-    const cand = data.candidates?.[0];
-    let out = (cand?.content?.parts || []).map(p => p.text || '').join('\n').trim();
+    let out = '', finish = null;
+    await readSSE(res, data => {
+      const cand = data.candidates?.[0];
+      const t = (cand?.content?.parts || []).map(p => p.text || '').join('');
+      if (t){ out += t; if (onChunk) onChunk(out); }
+      if (cand?.finishReason) finish = cand.finishReason;
+    });
+    out = out.trim();
     if (!out) throw new Error('Gemini 응답이 비어 있습니다 (안전 필터 또는 토큰 한도)');
-    if (cand?.finishReason === 'MAX_TOKENS') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
+    if (finish === 'MAX_TOKENS') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
     return { text: out, model: modelLabel('gemini') };
   }
 
@@ -1144,15 +1245,18 @@ async function callLLM(s, text, history){
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, system: sys, messages: [
+    body: JSON.stringify({ model: MODELS.anthropic, max_tokens: 8192, stream: true, system: sys, messages: [
       ...hist.map(h => ({ role: h.role, content: h.text })),
       { role: 'user', content: text },
     ] }),
   });
   if (!res.ok) throw new Error('Claude API 오류 ' + res.status);
-  const data = await res.json();
-  let out = data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-  if (data.stop_reason === 'max_tokens') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
+  let out = '', stop = null;
+  await readSSE(res, data => {
+    if (data.type === 'content_block_delta' && data.delta && data.delta.text){ out += data.delta.text; if (onChunk) onChunk(out); }
+    if (data.type === 'message_delta' && data.delta && data.delta.stop_reason) stop = data.delta.stop_reason;
+  });
+  if (stop === 'max_tokens') out += '\n\n…(답변이 길어 토큰 한도에서 멈췄어요. "이어서 답해줘"라고 해주세요.)';
   return { text: out, model: modelLabel('anthropic') };
 }
 
@@ -1193,25 +1297,35 @@ async function runMeeting(rawText){
   diary(host.id, `회의 소집: "${topic.slice(0,30)}${topic.length>30?'…':''}" (참석: ${names})`);
   renderTab();
 
-  const secFloor = document.querySelector('#room-secretary .floor');
+  // 회의실로 이동 — 테이블 주위에 둘러앉는다 (사회자는 상석)
+  const meetFloor = document.querySelector('#room-meeting .floor');
+  const meetRoom = document.getElementById('room-meeting');
+  if (meetRoom) meetRoom.classList.add('highlight');
   const inMeeting = [host, ...attendees];
+  const seats = [ {l:44,t:10}, {l:16,t:22}, {l:70,t:22}, {l:10,t:58}, {l:76,t:58} ]; // 상석 + 테이블 양옆
   inMeeting.forEach((s, i) => {
     s.state = 'working'; s.el.classList.add('working');
-    secFloor.appendChild(s.el);
-    s.el.style.left = (15 + i * 22) + '%'; s.el.style.top = '30%';
+    meetFloor.appendChild(s.el);
+    const seat = seats[i] || { l: 20 + i*15, t: 40 };
+    s.el.style.left = seat.l + '%'; s.el.style.top = seat.t + '%';
     say(s, '🗣 회의 중...');
   });
+  // 라운드별 진행상황을 '작업 중' 자리에 실시간 표시
+  const meetNote = msg => { const el = document.getElementById('live-' + t.ts); if (el) el.textContent = msg; };
 
   const started = Date.now();
   let transcript;
   try{
+    meetNote(`🗣 1라운드 — 참석자 ${attendees.length}명이 각자 의견을 정리하는 중…`);
     const r1 = await Promise.all(attendees.map(a => callLLM(a,
       `회의 발언 요청. 안건: "${topic}"\n너의 전문 영역 관점에서 발언하라(회의 존댓말 구어체):\n① 진단 — 무엇이 문제/기회인가 (근거·숫자 있으면 인용, 없으면 '가정'이라 표시)\n② 구체안 2~3개 — 누가·무엇을·어떻게 / 예상 비용·효과\n③ 최우선 1개와 이유.\n"강화하자/노력하자" 같은 추상적 표현 금지, 구체적으로. 600자 내외.`)));
+    meetNote('⚔️ 2라운드 — 서로의 안을 교차 반박·보완하는 중…');
     const r2 = await Promise.all(attendees.map((a, i) => {
       const others = attendees.map((b, j) => i === j ? null : `[${b.name}]: ${r1[j].text}`).filter(Boolean).join('\n\n');
       return callLLM(a, `회의 2라운드(교차 반박). 안건: "${topic}"\n다른 참석자의 발언:\n${others}\n\n① 동의 지점 ② 반박·구멍 — 상대 안의 허점·리스크·비용을 최소 1개 반드시 지적 ③ 상대 안을 반영해 네 안을 한 단계 업그레이드. 좋은 말만 하지 말 것. 회의 구어체 450자 내외.`);
     }));
     const allStatements = attendees.map((a, i) => `### ${a.name} (1라운드)\n${r1[i].text}\n\n### ${a.name} (2라운드)\n${r2[i].text}`).join('\n\n');
+    meetNote('📝 사회자(비서실장)가 옵션 비교와 결론을 정리하는 중…');
     const syn = await callLLM(host,
       `너는 이 회의의 사회자(비서실장)다. 안건: "${topic}"\n참석자 발언 전문:\n\n${allStatements}\n\n아래 형식으로 회의를 '결정'까지 정리하라(마크다운, 표 사용):\n\n## 옵션 비교\n실행안 2~3개를 표로 — | 옵션 | 핵심 | 기대효과 | 비용·자원 | 리스크 |\n\n## 결정\n- 추천안: (1개 + 이유)\n- 미채택안: (무엇을 왜 뺐는지)\n- ⚠️ 대표 판단 필요: (합의 안 된 이견 — 없으면 '없음')\n\n## 액션 아이템\n표로 — | 담당 | 할 일 | 기한 | 성공지표 |\n\n근거 없는 항목은 '가정' 또는 '데이터 필요'로 표시. 구체적으로. 900자 내외.`);
 
@@ -1229,6 +1343,7 @@ async function runMeeting(rawText){
   if (mine){ Object.assign(mine, t); mine.status = 'done'; mine.result = transcript; mine.dur = Math.round((Date.now() - started)/1000); }
   store.save(host.id, 'tasks', all);
   diary(host.id, `회의 종료 (${Math.round((Date.now() - started)/1000)}초)`);
+  if (meetRoom) meetRoom.classList.remove('highlight');
   inMeeting.forEach(s => { s.state = 'idle'; s.el.classList.remove('working'); s.el.classList.remove('talking'); goHome(s); });
   if (selected && selected.id === host.id && activeTab === 'work') renderTab();
 }
@@ -1292,7 +1407,20 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
         && !x.result.startsWith('(시뮬레이션') && !x.result.startsWith('⚠️'))
       .slice(-3)
       .flatMap(x => [{ role: 'user', text: x.text }, { role: 'assistant', text: x.result.slice(0, 3000) }]);
-    const r = await callLLM(s, text, hist);
+    // 스트리밍: 생성되는 대로 '작업 중' 자리에 실시간 표시 (80ms 스로틀, 하단 근처일 때만 자동 스크롤)
+    let lastPaint = 0;
+    const onChunk = partial => {
+      const now = Date.now();
+      if (now - lastPaint < 80) return;
+      lastPaint = now;
+      const el = document.getElementById('live-' + t.ts);
+      if (!el) return;
+      const nearBottom = tabBody.scrollHeight - tabBody.scrollTop - tabBody.clientHeight < 90;
+      el.className = 'result';
+      el.innerHTML = mdRender(partial) + '<span class="cursor">▌</span>';
+      if (nearBottom) tabBody.scrollTop = tabBody.scrollHeight;
+    };
+    const r = await callLLM(s, styleHint(text), hist, onChunk);
     if (r === null){
       result = `(시뮬레이션 모드) 접수했습니다.\n\n실제로 일하게 하는 방법 두 가지:\n① 오른쪽 위 [⚙ API 키]에 Anthropic(sk-ant-…) 또는 Google Gemini API 키를 넣으면 이 화면에서 바로 답합니다.\n② 아래 [프롬프트 복사]를 눌러 옵시디언 볼트에서 Claude Code에 붙여넣으면, 위키를 읽고 쓰면서 진짜 업무를 수행합니다.`;
       await new Promise(r2 => setTimeout(r2, 4000 + Math.random()*3000));
@@ -1801,6 +1929,44 @@ function svDelete(id){ if (!confirm('삭제할까요?')) return; svSave(svLoad()
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('surveyOverlay').classList.contains('open')) closeSurvey();
 });
+
+/* ── 답변 스타일 (간결/보통/상세) ── */
+function styleHint(t){
+  const v = (document.getElementById('styleSel') || {}).value || '보통';
+  if (v === '간결') return t + '\n\n(답변 스타일: 핵심만 간결하게, 10줄 이내)';
+  if (v === '상세') return t + '\n\n(답변 스타일: 깊이 있고 상세하게, 소제목·표로 구조화)';
+  return t;
+}
+(function initStyleSel(){
+  const sel = document.getElementById('styleSel'); if (!sel) return;
+  const saved = localStorage.getItem('bp.style'); if (saved) sel.value = saved;
+  sel.addEventListener('change', () => localStorage.setItem('bp.style', sel.value));
+})();
+
+/* ── 🎤 음성 입력 (브라우저 STT, ko-KR) ── */
+let _rec = null, _recOn = false;
+function toggleMic(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = document.getElementById('micBtn');
+  if (!SR){ alert('이 브라우저는 음성 입력을 지원하지 않습니다. Chrome(안드로이드 포함)에서 사용해 주세요.'); return; }
+  if (_recOn){ _rec.stop(); return; }
+  const input = document.getElementById('input');
+  const base = input.value.trim();
+  _rec = new SR();
+  _rec.lang = 'ko-KR'; _rec.interimResults = true; _rec.continuous = true;
+  let fin = '';
+  _rec.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const r = e.results[i];
+      if (r.isFinal) fin += r[0].transcript; else interim += r[0].transcript;
+    }
+    input.value = (base ? base + ' ' : '') + fin + interim;
+  };
+  _rec.onend = () => { _recOn = false; btn.classList.remove('rec'); };
+  _rec.onerror = () => { _recOn = false; btn.classList.remove('rec'); };
+  _rec.start(); _recOn = true; btn.classList.add('rec');
+}
 
 buildStaffGrid();  // 모바일 직원 카드
 // 클라우드가 켜져 있으면 시작 시 원격 기억을 끌어와 병합
