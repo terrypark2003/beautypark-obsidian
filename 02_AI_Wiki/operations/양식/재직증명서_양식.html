@@ -1,0 +1,83 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'WenQuanYi Zen Hei',sans-serif;}
+@page{size:A4;margin:0;}
+.pg{width:210mm;height:296mm;position:relative;background:#fff;overflow:hidden;padding:0 20mm;}
+.band{text-align:center;padding:6mm 0 3.5mm;}
+.emb{width:10mm;display:block;margin:0 auto 1.6mm;}
+.logo{font-family:'Liberation Serif','DejaVu Serif',serif;color:#877969;letter-spacing:2.6mm;font-size:4.9mm;}
+.logo small{display:block;font-family:'WenQuanYi Zen Hei';letter-spacing:1.8mm;font-size:2.7mm;color:#a3968a;margin-top:1.2mm;}
+.goldline{height:1.1mm;background:linear-gradient(90deg,#c9b299,#877969,#c9b299);}
+.docno{text-align:right;font-size:2.9mm;color:#8b8071;margin-top:2.5mm;letter-spacing:.3mm;}
+h1{text-align:center;font-size:9.4mm;color:#3f382e;letter-spacing:6mm;text-indent:6mm;margin:5mm 0 5.5mm;font-weight:bold;}
+table{width:100%;border-collapse:collapse;margin-bottom:4.6mm;}
+caption{caption-side:top;text-align:left;font-size:3.3mm;font-weight:bold;color:#5f5346;letter-spacing:1.3mm;padding-bottom:1.5mm;}
+th{background:#f3efe6;color:#5f5346;font-size:3.4mm;font-weight:bold;border:.32mm solid #cfc5b2;padding:2.4mm 3mm;width:27%;text-align:center;letter-spacing:.6mm;}
+td{border:.32mm solid #cfc5b2;font-size:3.7mm;color:#33302a;padding:2.4mm 5mm;background:#fff;letter-spacing:.2mm;}
+td.c{text-align:center;}
+.bk{color:#b3aa98;letter-spacing:.2mm;}
+.fl{display:inline-block;border-bottom:.3mm dotted #c3b8a4;vertical-align:baseline;height:4.2mm;}
+.hi{font-weight:bold;color:#5f5346;font-size:4.1mm;letter-spacing:1.2mm;}
+thead th{background:#5f5346;color:#f7f3ec;border-color:#5f5346;width:auto;}
+tbody td.c{font-size:3.6mm;}
+.note{font-size:2.9mm;color:#7c7263;line-height:1.65;background:#faf6ea;border-left:.9mm solid #c9b299;padding:2.2mm 4mm;margin:-1mm 0 4mm;letter-spacing:.1mm;}
+.stmt{text-align:center;font-size:4.4mm;color:#33302a;letter-spacing:.7mm;line-height:1.85;margin:5mm 0 4.5mm;}
+.stmt b{color:#5f5346;}
+.date{text-align:center;font-size:4.5mm;color:#3f382e;letter-spacing:2.4mm;margin-bottom:6mm;}
+.issuer{text-align:center;}
+.issuer .org{font-size:6.2mm;font-weight:bold;color:#3f382e;letter-spacing:2.6mm;}
+.issuer .rep{font-size:4.4mm;color:#3f382e;letter-spacing:1.6mm;margin-top:3.6mm;}
+.issuer .meta{font-size:3mm;color:#8b8071;line-height:1.7;margin-top:3.4mm;letter-spacing:.2mm;}
+.foot{position:absolute;bottom:5.5mm;left:20mm;right:20mm;border-top:.3mm solid #ded6c8;padding-top:2.4mm;text-align:center;font-size:2.6mm;color:#a49b8a;}
+</style></head><body>
+<div class="pg">
+  <div class="band">
+    <svg class="emb" viewBox="0 0 100 128"><ellipse cx="50" cy="64" rx="47" ry="61" fill="none" stroke="#877969" stroke-width="2.4"/><path d="M50 13.5 L52.7 24.3 L63.5 27 L52.7 29.7 L50 40.5 L47.3 29.7 L36.5 27 L47.3 24.3 Z" fill="#877969"/><text x="50" y="93" font-family="Liberation Serif,serif" font-size="60" fill="#877969" text-anchor="middle">B</text></svg>
+    <div class="logo">BEAUTY PARK<small>뷰티파크의원 범어점</small></div>
+  </div>
+  <div class="goldline"></div>
+  <div class="docno">문서번호 : 뷰티파크-인사-{{연도}}-{{번호}}</div>
+
+  <h1>재직증명서</h1>
+
+  <table>
+    <caption>1. 인적사항</caption>
+    <tr><th>성 명</th><td class="hi">{{성명}}</td></tr>
+    <tr><th>생년월일</th><td>{{생년월일}}</td></tr>
+  </table>
+
+  <table>
+    <caption>2. 재직사항</caption>
+    <tr><th>소 속</th><td>뷰티파크의원 범어점 &nbsp;·&nbsp; {{소속팀}}</td></tr>
+    <tr><th>직 위</th><td class="hi">{{직위}}</td></tr>
+    <tr><th>담당업무</th><td>{{담당업무}}</td></tr>
+    <tr><th>재직기간</th><td><b>{{입사일}} ~ 현재</b> &nbsp;({{발급연}}년 {{발급월}}월 {{발급일}}일 기준)</td></tr>
+    <tr><th>제출처 · 용도</th><td><span class="fl" style="width:100%"></span></td></tr>
+  </table>
+
+  <table>
+    <caption>3. 인사이력</caption>
+    <thead><tr><th style="width:22%">구 분</th><th style="width:34%">일 자</th><th>직 위</th></tr></thead>
+    <tbody>
+      <tr><td class="c">입 사</td><td class="c">{{입사일}}</td><td class="c">{{입사직위}}</td></tr>
+      <tr><td class="c">승 진</td><td class="c">{{승진일}}</td><td class="c">{{승진직위}}</td></tr>
+      <tr><td class="c">현 재</td><td class="c">{{발급연}}년 {{발급월}}월 {{발급일}}일 기준</td><td class="c">{{직위}} 재직 중</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">※ 본원은 <b>2025년 5월</b> 상호를 「베러미의원 범어점」에서 「뷰티파크의원 범어점」으로 변경하였으며, 사업장 및 사용자의 동일성은 유지됩니다. 위 재직기간에는 상호 변경 전 기간이 포함되어 있습니다.</div>
+
+  <div class="stmt">위 사람은 본원에 <b>위와 같이 재직 중임을 증명합니다.</b></div>
+  <div class="date">{{발급연}} 년 &nbsp; {{발급월}} 월 &nbsp; {{발급일}} 일</div>
+
+  <div class="issuer">
+    <div class="org">뷰티파크의원 범어점</div>
+    <div class="rep">대표원장 &nbsp; 박 석 환</div>
+    <div class="meta">
+      사업자등록번호 : 832-27-01591<br>
+      주소 : 대구광역시 수성구 달구벌대로 2362, 6층 (수성동3가) 뷰티파크의원 범어점
+    </div>
+  </div>
+
+  <div class="foot">본 증명서는 근로기준법 제39조에 따라 발급되었으며, 근로자가 요구한 사항에 한하여 기재되었습니다.</div>
+</div>
+</body></html>
