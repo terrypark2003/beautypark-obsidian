@@ -1,6 +1,6 @@
 ---
 status: verified
-updated: 2026-09-03
+updated: 2026-09-09
 owner: AI사서
 tags: [MOC, procedures]
 ---
@@ -15,6 +15,7 @@ tags: [MOC, procedures]
 - [[진료_프로토콜]] — 원내 표준 절차
 - [[검사_해석]] — 혈액 면역·염증 지표 (부록·seed, 출처 확보 후 원장 감수)
 - [[장펄스_알렉산드라이트_지루각화증]] — SK 파라미터 검토 (Kim 2014 재현 · 원내 Apogee 환산 · 권고안) ⚠️draft
+- [[제모_레이저_파라미터]] — 원내 기준값 기록 (장비·파장 미확인) ⚠️seed
 
 ## 관련
 
